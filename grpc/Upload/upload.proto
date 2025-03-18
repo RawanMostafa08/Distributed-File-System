@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+option go_package = "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload";
+
+package Upload;
+
+message Empty {}
+
+message UploadRequestBody {
+    string client_IP = 1;
+}
+
+message UploadResponseBody {
+    string selected_port = 1;
+    string data_node_IP = 2;
+}
+
+message UploadFileRequestBody {
+    bytes file_data = 1;
+    string file_name = 2;
+}
+
+message NodeMasterAckRequestBody {
+    bool status = 1;
+}
+
+message MasterClientAckRequestBody {
+    bool status = 1;
+}
+
+service DFS {
+    rpc UploadRequest(UploadRequestBody) returns (UploadResponseBody);
+    rpc UploadFileRequest(UploadFileRequestBody) returns (Empty);
+
+    rpc NodeMasterAckRequest(NodeMasterAckRequestBody) returns (Empty);
+    rpc MasterClientAckRequest(MasterClientAckRequestBody) returns (Empty);
+
+}
