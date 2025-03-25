@@ -1,35 +1,35 @@
 package main
 
 import (
-	"context"
+	// "context"
 	"fmt"
-	"net"
-	"strings"
+	// "net"
+	// "strings"
 
-	pb "Distributed-File-System/grpc/Upload"
+	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/peer"
+	// "google.golang.org/grpc"
+	// "google.golang.org/grpc/peer"
 )
 
-type DataNode struct {
-	DataKeeperNode string
-	IsDataNodeAlive bool
-}
+// type DataNode struct {
+// 	DataKeeperNode string
+// 	IsDataNodeAlive bool
+// }
 
-type FileData struct {
-	Filename string
-	FilePath string
-}
+// type FileData struct {
+// 	Filename string
+// 	FilePath string
+// }
 
-type LookUpTableTuple struct {
-	Node DataNode
-	File []FileData
-}
+// type LookUpTableTuple struct {
+// 	Node DataNode
+// 	File []FileData
+// }
 
-type textServer struct {
-	pb.UnimplementedTextServiceServer
-}
+// type textServer struct {
+// 	pb.UnimplementedTextServiceServer
+// }
 
 // func (s *textServer) Capitalize(ctx context.Context, req *pb.TextRequest) (*pb.TextResponse, error) {
 // 	text := req.GetText()
@@ -40,15 +40,17 @@ type textServer struct {
 // }
 
 func main() {
-	lis, err := net.Listen("tcp", ":8080")
-	if err != nil {
-		fmt.Println("failed to listen:", err)
-		return
-	}
-	s := grpc.NewServer()
-	pb.RegisterTextServiceServer(s, &textServer{})
-	fmt.Println("Server started. Listening on port 8080...")
-	if err := s.Serve(lis); err != nil {
-		fmt.Println("failed to serve:", err)
-	}
+	fmt.Println("master started...")
+	pb.UploadRequestBody()
+	// lis, err := net.Listen("tcp", ":8080")
+	// if err != nil {
+	// 	fmt.Println("failed to listen:", err)
+	// 	return
+	// }
+	// s := grpc.NewServer()
+	// pb.RegisterTextServiceServer(s, &textServer{})
+	// fmt.Println("Server started. Listening on port 8080...")
+	// if err := s.Serve(lis); err != nil {
+	// 	fmt.Println("failed to serve:", err)
+	// }
 }
