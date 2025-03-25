@@ -1,34 +1,20 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"// Import the generated package
-
-	"google.golang.org/grpc"
+	// "context"
+	// "fmt"
+	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
+	// pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"// Import the generated package
+	// "google.golang.org/grpc"
 )
 
 func main() {
-	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
-	if err != nil {
-		fmt.Println("did not connect:", err)
-		return
-	}
-	defer conn.Close()
-	c := pb.NewTextServiceClient(conn)
 
-	// Read input from user
-	fmt.Print("Enter text to capitalize: ")
-	var text string
-	fmt.Scanln(&text)
+	var masterAddress, clientAddress string
+	nodes := []string{}
 
-	// Call the RPC method
-	resp, err := c.Capitalize(context.Background(), &pb.TextRequest{Text: text})
-	if err != nil {
-		fmt.Println("Error calling Capitalize:", err)
-		return
-	}
-
-	// Print the result
-	fmt.Println("Capitalized text:", resp.GetCapitalizedText())
+	pbUtils.ReadFile(&masterAddress,&clientAddress,&nodes)
+	// fmt.Println("Master Address:", masterAddress)
+	// fmt.Println("Client Address:", clientAddress)
+	// fmt.Println("Nodes Master:", nodes)
 }

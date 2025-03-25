@@ -28,11 +28,26 @@ message MasterClientAckRequestBody {
     bool status = 1;
 }
 
+message DownloadPortsRequestBody{
+    string file_name = 1;
+}
+message DownloadPortsResponseBody{
+    repeated string ip_addresses = 1;
+    repeated string ports = 2;
+}
+
+
+message DownloadFileResponseBody{
+    Bytes file_data = 1;
+}
+
+
 service DFS {
     rpc UploadRequest(UploadRequestBody) returns (UploadResponseBody);
     rpc UploadFileRequest(UploadFileRequestBody) returns (Empty);
-
     rpc NodeMasterAckRequest(NodeMasterAckRequestBody) returns (Empty);
     rpc MasterClientAckRequest(MasterClientAckRequestBody) returns (Empty);
+    rpc DownloadPortsRequest(DownloadPortsRequestBody) returns (DownloadPortsResponseBody);
+    rpc DownloadFileRequest(Empty) returns (DownloadFileResponseBody);
 
 }
