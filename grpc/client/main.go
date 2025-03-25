@@ -3,8 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-
-	pb "github.com/RawanMostafa08/Distributed-File-System" // Import the generated package
+	pb "Distributed-File-System/grpc/Upload" // Import the generated package
 
 	"google.golang.org/grpc"
 )

@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	pb "github.com/RawanMostafa08/Distributed-File-System"
+	pb "Distributed-File-System/grpc/Upload"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/peer"
