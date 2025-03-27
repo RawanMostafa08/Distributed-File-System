@@ -340,6 +340,7 @@ func (x *DownloadPortsRequestBody) GetFileName() string {
 type DownloadPortsResponseBody struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Addresses     []string               `protobuf:"bytes,1,rep,name=addresses,proto3" json:"addresses,omitempty"`
+	FileSize      int64                  `protobuf:"varint,2,opt,name=file_size,json=fileSize,proto3" json:"file_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -379,6 +380,13 @@ func (x *DownloadPortsResponseBody) GetAddresses() []string {
 		return x.Addresses
 	}
 	return nil
+}
+
+func (x *DownloadPortsResponseBody) GetFileSize() int64 {
+	if x != nil {
+		return x.FileSize
+	}
+	return 0
 }
 
 type DownloadFileResponseBody struct {
@@ -428,6 +436,8 @@ func (x *DownloadFileResponseBody) GetFileData() []byte {
 type DownloadFileRequestBody struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FileName      string                 `protobuf:"bytes,1,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	Start         int64                  `protobuf:"varint,2,opt,name=start,proto3" json:"start,omitempty"`
+	End           int64                  `protobuf:"varint,3,opt,name=end,proto3" json:"end,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -469,6 +479,20 @@ func (x *DownloadFileRequestBody) GetFileName() string {
 	return ""
 }
 
+func (x *DownloadFileRequestBody) GetStart() int64 {
+	if x != nil {
+		return x.Start
+	}
+	return 0
+}
+
+func (x *DownloadFileRequestBody) GetEnd() int64 {
+	if x != nil {
+		return x.End
+	}
+	return 0
+}
+
 var File_upload_proto protoreflect.FileDescriptor
 
 const file_upload_proto_rawDesc = "" +
@@ -489,13 +513,16 @@ const file_upload_proto_rawDesc = "" +
 	"\x1aMasterClientAckRequestBody\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\bR\x06status\"7\n" +
 	"\x18DownloadPortsRequestBody\x12\x1b\n" +
-	"\tfile_name\x18\x01 \x01(\tR\bfileName\"9\n" +
+	"\tfile_name\x18\x01 \x01(\tR\bfileName\"V\n" +
 	"\x19DownloadPortsResponseBody\x12\x1c\n" +
-	"\taddresses\x18\x01 \x03(\tR\taddresses\"7\n" +
+	"\taddresses\x18\x01 \x03(\tR\taddresses\x12\x1b\n" +
+	"\tfile_size\x18\x02 \x01(\x03R\bfileSize\"7\n" +
 	"\x18DownloadFileResponseBody\x12\x1b\n" +
-	"\tfile_data\x18\x01 \x01(\fR\bfileData\"6\n" +
+	"\tfile_data\x18\x01 \x01(\fR\bfileData\"^\n" +
 	"\x17DownloadFileRequestBody\x12\x1b\n" +
-	"\tfile_name\x18\x01 \x01(\tR\bfileName2\xdd\x03\n" +
+	"\tfile_name\x18\x01 \x01(\tR\bfileName\x12\x14\n" +
+	"\x05start\x18\x02 \x01(\x03R\x05start\x12\x10\n" +
+	"\x03end\x18\x03 \x01(\x03R\x03end2\xdd\x03\n" +
 	"\x03DFS\x12F\n" +
 	"\rUploadRequest\x12\x19.Upload.UploadRequestBody\x1a\x1a.Upload.UploadResponseBody\x12A\n" +
 	"\x11UploadFileRequest\x12\x1d.Upload.UploadFileRequestBody\x1a\r.Upload.Empty\x12G\n" +

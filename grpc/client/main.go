@@ -3,7 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
-
+	"math"
+	"sync"
+	"os"
 	// "net"
 	"google.golang.org/grpc"
 	// "google.golang.org/protobuf/internal/encoding/text"
@@ -34,25 +36,28 @@ func requestDownloadPorts(masterAddress string , file_name string) (*pb.Download
 
 }
 
-func requestDownloadFile(nodeAddress string , file_name string) (*pb.DownloadFileResponseBody, error) {
+
+func requestDownloadFile(nodeAddress, fileName string, start, end int64, wg *sync.WaitGroup, chunks map[int][]byte, index int, mu *sync.Mutex) {
+	defer wg.Done()
 	conn, err := grpc.Dial(nodeAddress, grpc.WithInsecure())
 	if err != nil {
-		fmt.Println("did not connect:", err)
-		return nil, err
+		fmt.Println("Failed to connect to node:", err)
+		return
 	}
 	defer conn.Close()
+
 	c := pb.NewDFSClient(conn)
-	fmt.Println("Connected to Node",c)
-		
-	// Call the RPC method
-	resp, err := c.DownloadFileRequest(context.Background(), &pb.DownloadFileRequestBody{FileName: file_name})
+	resp, err := c.DownloadFileRequest(context.Background(), &pb.DownloadFileRequestBody{FileName: fileName, Start: start, End: end})
 
 	if err != nil {
-		fmt.Println("Error calling DownloadFileRequest:", err)
-		return nil, err
+		fmt.Println("Error downloading chunk:", err)
+		return
 	}
-	return resp,nil	
-	}
+
+	mu.Lock()
+	chunks[index] = resp.FileData
+	mu.Unlock()
+}
 
 func main() {
 
@@ -76,14 +81,53 @@ func main() {
 		return
 	}
 	fmt.Println("Nodes Master:", resp.Addresses)
+	count := len(resp.Addresses) 
 	
-	var resp_ *pb.DownloadFileResponseBody 
-	for i := 0; i < len(resp.Addresses); i++ {
-		resp_ , err = requestDownloadFile(resp.Addresses[i],file_name)
-		if err != nil {
-			fmt.Println("Error calling DownloadFileRequest:", err)
-			return
+	fileSize := resp.FileSize
+	chunkSize := int64(math.Ceil(float64(fileSize) / float64(count)))
+
+	var wg sync.WaitGroup
+	chunks := make(map[int][]byte)
+	var mu sync.Mutex
+
+	for i, node := range resp.Addresses {
+		start := int64(i) * chunkSize
+		end := start + chunkSize - 1
+		if end >= fileSize {
+			end = fileSize - 1
 		}
-		fmt.Println("File Data:", resp_)
+		wg.Add(1)
+		go requestDownloadFile(node, file_name, start, end, &wg, chunks, i, &mu)
 	}
+
+	wg.Wait()
+
+
+	// var resp_ *pb.DownloadFileResponseBody 
+	// for i := 0; i < len(resp.Addresses); i++ {
+	// 	resp_ , err = requestDownloadFile(resp.Addresses[i],file_name)
+	// 	if err != nil {
+	// 		fmt.Println("Error calling DownloadFileRequest:", err)
+	// 		return
+	// 	}
+	// 	fmt.Println("File Data:", resp_)
+	// }
+
+
+	// Reconstruct the file
+	outputFile, err := os.Create(file_name)
+	if err != nil {
+		fmt.Println("Error creating file:", err)
+		return
+	}
+	defer outputFile.Close()
+
+	for i := 0; i < count; i++ {
+		if data, exists := chunks[i]; exists {
+			outputFile.Write(data)
+		}
+	}
+
+	fmt.Println("File downloaded successfully!")
+
 }

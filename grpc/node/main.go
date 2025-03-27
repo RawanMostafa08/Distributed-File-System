@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 	"io/ioutil"
+	"os"
+	"io"
 	// "strings"
 
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
@@ -18,12 +20,36 @@ type textServer struct {
 }
 
 func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFileRequestBody) (*pb.DownloadFileResponseBody, error) {
-	fmt.Println("DownloadFileRequest called")
-	var data []byte
-	data , err := ReadMP4File("grpc\\files\\"+req.FileName)
+	fmt.Println("DownloadFileRequest called for:", req.FileName, "Range:", req.Start, "-", req.End)
+
+	// Open the file
+	filePath := "grpc\\files\\" + req.FileName
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
+	defer file.Close()
+
+	// Get the requested chunk
+	chunkSize := req.End - req.Start + 1
+	data := make([]byte, chunkSize)
+
+	// Seek to the start position
+	_, err = file.Seek(req.Start, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	// Read the requested bytes
+	n, err := file.Read(data)
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	// Trim the slice in case we read fewer bytes than requested
+	data = data[:n]
+
+	// Return the chunk as a response
 	return &pb.DownloadFileResponseBody{FileData: data}, nil
 }
 

@@ -20,6 +20,7 @@ type DataNode struct {
 type FileData struct {
 	Filename string
 	FilePath string
+	FileSize int64
 	Node DataNode
 }
 
@@ -36,24 +37,29 @@ var lookupTuple LookUpTableTuple
 func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadPortsRequestBody) (*pb.DownloadPortsResponseBody, error) {
 	fmt.Println("DownloadPortsRequest called")
 	var nodes [] string 
+	var file_size int64
+	file_size = 0
 	fmt.Println(req.GetFileName()) 
+	
 	lookupTuple := LookUpTableTuple{
 		File: []FileData{
-			{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", Node: DataNode{DataKeeperNode: ":3000", IsDataNodeAlive: true}},
-			{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", Node: DataNode{DataKeeperNode: ":8090", IsDataNodeAlive: true}},
+			{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4" , FileSize:1055736 , Node: DataNode{DataKeeperNode: ":3000", IsDataNodeAlive: true}},
+			{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize:1055736 , Node: DataNode{DataKeeperNode: ":8090", IsDataNodeAlive: true}},
 		},
 	}
+
 	for _, file := range lookupTuple.File {
 		fmt.Println(file.Filename + " " + req.GetFileName()) 
 		if file.Filename == req.GetFileName() {
 			if file.Node.IsDataNodeAlive == true {
 				nodes = append(nodes, file.Node.DataKeeperNode)
+				file_size = file.FileSize
 			}
 		}
 	}
 	fmt.Println(nodes) 
 
-	return &pb.DownloadPortsResponseBody{Addresses: nodes}, nil
+	return &pb.DownloadPortsResponseBody{Addresses: nodes, FileSize: file_size }, nil
 }
 
 func main() {
