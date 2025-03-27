@@ -32,13 +32,16 @@ message DownloadPortsRequestBody{
     string file_name = 1;
 }
 message DownloadPortsResponseBody{
-    repeated string ip_addresses = 1;
-    repeated string ports = 2;
+    repeated string addresses = 1;
 }
 
 
 message DownloadFileResponseBody{
-    Bytes file_data = 1;
+    bytes file_data = 1;
+}
+
+message DownloadFileRequestBody{
+    string file_name = 1;
 }
 
 
@@ -48,6 +51,6 @@ service DFS {
     rpc NodeMasterAckRequest(NodeMasterAckRequestBody) returns (Empty);
     rpc MasterClientAckRequest(MasterClientAckRequestBody) returns (Empty);
     rpc DownloadPortsRequest(DownloadPortsRequestBody) returns (DownloadPortsResponseBody);
-    rpc DownloadFileRequest(Empty) returns (DownloadFileResponseBody);
+    rpc DownloadFileRequest(DownloadFileRequestBody) returns (DownloadFileResponseBody);
 
 }
