@@ -88,7 +88,4 @@ func main() {
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
 	}
-
-
-
 }

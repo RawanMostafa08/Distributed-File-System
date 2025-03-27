@@ -40,13 +40,15 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 	var file_size int64
 	file_size = 0
 	fmt.Println(req.GetFileName()) 
-	
+	// ##########################################################################
+	// Dummy Table Should be removed later 
 	lookupTuple := LookUpTableTuple{
 		File: []FileData{
 			{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4" , FileSize:1055736 , Node: DataNode{DataKeeperNode: ":3000", IsDataNodeAlive: true}},
 			{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize:1055736 , Node: DataNode{DataKeeperNode: ":8090", IsDataNodeAlive: true}},
 		},
 	}
+	// ##########################################################################
 
 	for _, file := range lookupTuple.File {
 		fmt.Println(file.Filename + " " + req.GetFileName()) 
@@ -57,7 +59,6 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 			}
 		}
 	}
-	fmt.Println(nodes) 
 
 	return &pb.DownloadPortsResponseBody{Addresses: nodes, FileSize: file_size }, nil
 }
@@ -65,18 +66,9 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 func main() {
 
 	
-	fmt.Println("LookUpTableTuple Example:")
-	for _, file := range lookupTuple.File {
-		fmt.Println("File:", file.Filename, "| Path:", file.FilePath)
-	}
-
-
-	
 	fmt.Println("master started...")
-
 	var masterAddress, clientAddress string
 	nodes := []string{}
-
 	pbUtils.ReadFile(&masterAddress,&clientAddress,&nodes)
 	
 	lis, err := net.Listen("tcp", masterAddress)
@@ -84,11 +76,13 @@ func main() {
 		fmt.Println("failed to listen:", err)
 		return
 	}
+
 	s := grpc.NewServer()
 	pb.RegisterDFSServer(s, &textServer{})
 	fmt.Println("Server started. Listening on port 8080...")
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
 	}
+	
 
 }

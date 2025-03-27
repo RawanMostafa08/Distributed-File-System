@@ -16,7 +16,7 @@ import (
 )
 
 func requestDownloadPorts(masterAddress string , file_name string) (*pb.DownloadPortsResponseBody, error) {
-		conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return nil, err
@@ -57,40 +57,16 @@ func requestDownloadFile(nodeAddress, fileName string, start, end int64, wg *syn
 	mu.Lock()
 	chunks[index] = resp.FileData
 	mu.Unlock()
+
 }
 
-func main() {
-
-	var masterAddress, clientAddress string
-	nodes := []string{}
-
-	// Read input from user
-	fmt.Print("Enter File Name: ")
-	var file_name string
-	fmt.Scanln(&file_name)
-		
-
-	pbUtils.ReadFile(&masterAddress,&clientAddress,&nodes)
-	// Download Logic
-	// Connect to Master to get download ports
-	var resp *pb.DownloadPortsResponseBody 
-	var err error
-	resp , err = requestDownloadPorts(masterAddress , file_name)		
-	if err != nil {
-		fmt.Println("Error calling DownloadPortsRequest:", err)
-		return
-	}
-	fmt.Println("Nodes Master:", resp.Addresses)
-	count := len(resp.Addresses) 
-	
-	fileSize := resp.FileSize
-	chunkSize := int64(math.Ceil(float64(fileSize) / float64(count)))
-
+func downloadFile(Addresses []string, file_name string, fileSize int64) {
+	chunkSize := int64(math.Ceil(float64(fileSize) / float64(len(Addresses))))
 	var wg sync.WaitGroup
 	chunks := make(map[int][]byte)
 	var mu sync.Mutex
 
-	for i, node := range resp.Addresses {
+	for i, node := range Addresses {
 		start := int64(i) * chunkSize
 		end := start + chunkSize - 1
 		if end >= fileSize {
@@ -103,17 +79,6 @@ func main() {
 	wg.Wait()
 
 
-	// var resp_ *pb.DownloadFileResponseBody 
-	// for i := 0; i < len(resp.Addresses); i++ {
-	// 	resp_ , err = requestDownloadFile(resp.Addresses[i],file_name)
-	// 	if err != nil {
-	// 		fmt.Println("Error calling DownloadFileRequest:", err)
-	// 		return
-	// 	}
-	// 	fmt.Println("File Data:", resp_)
-	// }
-
-
 	// Reconstruct the file
 	outputFile, err := os.Create(file_name)
 	if err != nil {
@@ -122,7 +87,7 @@ func main() {
 	}
 	defer outputFile.Close()
 
-	for i := 0; i < count; i++ {
+	for i := 0; i < len(Addresses); i++ {
 		if data, exists := chunks[i]; exists {
 			outputFile.Write(data)
 		}
@@ -130,4 +95,32 @@ func main() {
 
 	fmt.Println("File downloaded successfully!")
 
+}
+
+func main() {
+
+	var masterAddress, clientAddress string
+	nodes := []string{}
+
+	// Download Logic
+	// Read input from user
+	fmt.Print("Enter File Name To Download : ")
+	var file_name string
+	fmt.Scanln(&file_name)
+		
+
+	pbUtils.ReadFile(&masterAddress,&clientAddress,&nodes)
+	// Connect to Master to get download ports
+	var resp *pb.DownloadPortsResponseBody 
+	var err error
+	resp , err = requestDownloadPorts(masterAddress , file_name)		
+	if err != nil {
+		fmt.Println("Error calling DownloadPortsRequest:", err)
+		return
+	}
+	fmt.Println("Nodes Master:", resp.Addresses)
+	
+	fileSize := resp.FileSize
+
+	downloadFile(resp.Addresses, file_name, fileSize)
 }
