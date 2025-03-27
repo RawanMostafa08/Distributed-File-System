@@ -20,7 +20,7 @@ type textServer struct {
 func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFileRequestBody) (*pb.DownloadFileResponseBody, error) {
 	fmt.Println("DownloadFileRequest called")
 	var data []byte
-	data , err := ReadMP4File("grpc\\files\\"+req.FileName+".mp4")
+	data , err := ReadMP4File("grpc\\files\\"+req.FileName)
 	if err != nil {
 		return nil, err
 	}

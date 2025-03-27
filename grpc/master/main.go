@@ -12,31 +12,60 @@ import (
 	// "google.golang.org/grpc/peer"
 )
 
-// type DataNode struct {
-// 	DataKeeperNode string
-// 	IsDataNodeAlive bool
-// }
+type DataNode struct {
+	DataKeeperNode string
+	IsDataNodeAlive bool
+}
 
-// type FileData struct {
-// 	Filename string
-// 	FilePath string
-// }
+type FileData struct {
+	Filename string
+	FilePath string
+	Node DataNode
+}
 
-// type LookUpTableTuple struct {
-// 	Node DataNode
-// 	File []FileData
-// }
+type LookUpTableTuple struct {
+	File []FileData
+}
+
 
 type textServer struct {
 	pb.UnimplementedDFSServer
 }
+var lookupTuple LookUpTableTuple
 
 func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadPortsRequestBody) (*pb.DownloadPortsResponseBody, error) {
 	fmt.Println("DownloadPortsRequest called")
-	return &pb.DownloadPortsResponseBody{Addresses: []string{":3000",":8090"}}, nil
+	var nodes [] string 
+	fmt.Println(req.GetFileName()) 
+	lookupTuple := LookUpTableTuple{
+		File: []FileData{
+			{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", Node: DataNode{DataKeeperNode: ":3000", IsDataNodeAlive: true}},
+			{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", Node: DataNode{DataKeeperNode: ":8090", IsDataNodeAlive: true}},
+		},
+	}
+	for _, file := range lookupTuple.File {
+		fmt.Println(file.Filename + " " + req.GetFileName()) 
+		if file.Filename == req.GetFileName() {
+			if file.Node.IsDataNodeAlive == true {
+				nodes = append(nodes, file.Node.DataKeeperNode)
+			}
+		}
+	}
+	fmt.Println(nodes) 
+
+	return &pb.DownloadPortsResponseBody{Addresses: nodes}, nil
 }
 
 func main() {
+
+	
+	fmt.Println("LookUpTableTuple Example:")
+	for _, file := range lookupTuple.File {
+		fmt.Println("File:", file.Filename, "| Path:", file.FilePath)
+	}
+
+
+	
 	fmt.Println("master started...")
 
 	var masterAddress, clientAddress string
@@ -55,7 +84,5 @@ func main() {
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
 	}
-
-
 
 }
