@@ -16,16 +16,18 @@ import (
 )
 
 type DataNode struct {
-	DataKeeperNode string
+	IP string
+	Port string
+	NodeID string
 	IsDataNodeAlive bool
 }
 
 type FileData struct {
-	FileID int
+	FileID string
 	Filename string
 	FilePath string
 	FileSize int64
-	Node DataNode
+	NodeID string
 }
 
 type LookUpTableTuple struct {
@@ -38,8 +40,36 @@ type LookUpTableTuple struct {
 type textServer struct {
 	pb.UnimplementedDFSServer
 }
-var lookupTuple LookUpTableTuple
+// var lookupTable [] FileData
 var dataNodes [] DataNode 
+
+var lookupTable = []FileData{
+	{
+		FileID:   "file_1",
+		Filename: "data1.txt",
+		FilePath: "/data/files/data1.txt",
+		FileSize: 1024,
+		NodeID:"Node_1",
+
+	},
+	{
+		FileID:   "file_2",
+		Filename: "data2.txt",
+		FilePath: "/data/files/data2.txt",
+		FileSize: 2048,
+		NodeID: "Node_2",
+	},
+}
+
+func getNodeByID(nodeID string) (DataNode, error) {
+	for _, node := range dataNodes {
+		if node.NodeID == nodeID {
+			return node, nil
+		}
+	}
+	return DataNode{}, errors.New("Node not found")
+}
+
 
 func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadPortsRequestBody) (*pb.DownloadPortsResponseBody, error) {
 	fmt.Println("DownloadPortsRequest called")
@@ -51,8 +81,8 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 	// Dummy Table Should be removed later , added id for each file
 	lookupTuple := LookUpTableTuple{
 		File: []FileData{
-			{FileID: 1, Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4" , FileSize:1055736 , Node: DataNode{DataKeeperNode: ":3000", IsDataNodeAlive: true}},
-			{FileID: 2, Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize:1055736 , Node: DataNode{DataKeeperNode: ":8090", IsDataNodeAlive: true}},
+			{FileID: "1", Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4" , FileSize:1055736 , NodeID:"Node_1"},
+			{FileID: "2", Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize:1055736 , NodeID: "Node_2"},
 		},
 	}
 	// ##########################################################################
@@ -60,8 +90,11 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 	for _, file := range lookupTuple.File {
 		fmt.Println(file.Filename + " " + req.GetFileName()) 
 		if file.Filename == req.GetFileName() {
-			if file.Node.IsDataNodeAlive == true {
-				nodes = append(nodes, file.Node.DataKeeperNode)
+			filenode,err:=getNodeByID(file.NodeID)
+			if err != nil {
+				fmt.Println("Error getting node by ID:", err)
+			}else if filenode.IsDataNodeAlive == true {
+				nodes = append(nodes, filenode.Port)
 				file_size = file.FileSize
 			}
 		}
@@ -71,49 +104,56 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 }
 
 // Replicate Helper Functions
-func getFileNodes(fileID int)  []string {
-
+func getFileNodes(fileID string)  []string {
 	nodes := []string{}
-	for _, f := range lookupTuple.File {
-		if f.FileID == fileID && f.Node.IsDataNodeAlive == true {
-			nodes = append(nodes, f.Node.DataKeeperNode )
+	for _, f := range lookupTable {
+		filenode,err:=getNodeByID(f.NodeID)
+		if err != nil {
+			fmt.Println("Error getting node by ID:", err)
+		}else if f.FileID == fileID && filenode.IsDataNodeAlive == true {
+			nodes = append(nodes, filenode.NodeID)
 		}
 	}
 	return  nodes
 }
 
-func selectNodeToCopyTo(fileID int, fileNodes []string) (string,error) {
+func selectNodeToCopyTo(fileID string, fileNodes []string) (string,error) {
 	// alive node , not in the list of nodes that have the file
 	validNodes := []string{}
 	for _,node := range dataNodes {
+		flag := false
 		if node.IsDataNodeAlive == true  {
 			for _, fileNode := range fileNodes {
-				if fileNode == node.DataKeeperNode {
-					continue
+				if fileNode == node.NodeID {
+				flag = true
+				break
 				}
-				validNodes = append(validNodes, node.DataKeeperNode)
 			}
-
+			if flag == false {
+			validNodes = append(validNodes, node.NodeID)
+			}
 		}
 	}
 	if len(validNodes) == 0 {
 		return "",errors.New("No valid nodes to copy to")
-	}
+	}else{
 	return validNodes[0],nil
-	
+	}
 
 }
 
-func CopyFileToNode(file FileData, srcNode string, destNode string) error {
+func CopyFileToNode(file FileData, srcNodeID string, destNodeID string) error {
 	//notify machines
+	fmt.Println("Copying ",file.FileID ," from ",srcNodeID, " to ", destNodeID)
 	//copy file
 	//update lookup table 
-	
-	for _,f := range lookupTuple.File {
-		if f.FileID == file.FileID {
-			f.Node.DataKeeperNode = destNode
-		}
-	}
+	file= FileData{
+		FileID:   file.FileID,
+		Filename: file.Filename,
+		FilePath: file.FilePath,
+		FileSize: file.FileSize,
+		NodeID: destNodeID,}
+	lookupTable = append(lookupTable, file)
 	return nil
 }
 
@@ -125,20 +165,24 @@ func CopyFileToNode(file FileData, srcNode string, destNode string) error {
 // fileid 2, file1, node1
 func ReplicateFile() {
 	for {
-		time.Sleep(10 * time.Second)
-		for _, file := range lookupTuple.File {
+		fmt.Println(lookupTable)
+		time.Sleep(1 * time.Second)
+		fmt.Println("Replicating Files")
+		for _, file := range lookupTable {
 			// get all nodes that have this file
 			nodes := getFileNodes(file.FileID);
 			if len(nodes) < 3 && len(nodes) > 0{
 					valid, err :=selectNodeToCopyTo(file.FileID,nodes)
 					if err != nil {
-						fmt.Errorf("Error selecting node to copy to")
-					}
-					fmt.Println("Selected Node to copy to: ", valid)
+						fmt.Println("Error selecting node to copy to:", err)
+					}else{
 					err = CopyFileToNode(file, nodes[0], valid)
 					if err != nil {
 						fmt.Errorf("Error copying file")
 					}
+				}
+			}else {
+				fmt.Println("File is already replicated in 3 nodes")
 			}
 		}
 
@@ -152,6 +196,12 @@ func main() {
 	var masterAddress, clientAddress string
 	nodes := []string{}
 	pbUtils.ReadFile(&masterAddress,&clientAddress,&nodes)
+	
+	for i, node := range nodes {
+		dataNodes = append(dataNodes, DataNode{Port: node, NodeID: fmt.Sprintf("Node_%d",i), IsDataNodeAlive: true})
+	}
+	// check if nodes are alive and update the dataNodes list
+	
 	
 	lis, err := net.Listen("tcp", masterAddress)
 	if err != nil {

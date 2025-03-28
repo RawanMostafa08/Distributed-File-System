@@ -9,7 +9,7 @@ import (
 
 func ReadFile(masterAddress,clientAddress *string,nodes *[]string)(){
 	// Open the file
-	file, err := os.Open("config.txt")
+	file, err := os.Open("../config.txt")
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		return
