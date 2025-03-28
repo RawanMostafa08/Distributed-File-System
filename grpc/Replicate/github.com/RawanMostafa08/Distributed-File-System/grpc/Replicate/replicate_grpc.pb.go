@@ -4,7 +4,7 @@
 // - protoc             v3.21.12
 // source: replicate.proto
 
-package replicate
+package Replicate
 
 import (
 	context "context"
@@ -19,14 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DFS_NotifyMachineDataTransferService_FullMethodName = "/replicate.DFS/notifyMachineDataTransferService"
+	DFS_CopyNotification_FullMethodName = "/replicate.DFS/CopyNotification"
+	DFS_CopyFile_FullMethodName         = "/replicate.DFS/CopyFile"
 )
 
 // DFSClient is the client API for DFS service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DFSClient interface {
-	NotifyMachineDataTransferService(ctx context.Context, in *MachineDataTransferRequest, opts ...grpc.CallOption) (*MachineDataTransferResponse, error)
+	CopyNotification(ctx context.Context, in *CopyNotificationRequest, opts ...grpc.CallOption) (*CopyNotificationResponse, error)
+	CopyFile(ctx context.Context, in *FileToCopyRequest, opts ...grpc.CallOption) (*FileToCopyResponse, error)
 }
 
 type dFSClient struct {
@@ -37,10 +39,20 @@ func NewDFSClient(cc grpc.ClientConnInterface) DFSClient {
 	return &dFSClient{cc}
 }
 
-func (c *dFSClient) NotifyMachineDataTransferService(ctx context.Context, in *MachineDataTransferRequest, opts ...grpc.CallOption) (*MachineDataTransferResponse, error) {
+func (c *dFSClient) CopyNotification(ctx context.Context, in *CopyNotificationRequest, opts ...grpc.CallOption) (*CopyNotificationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MachineDataTransferResponse)
-	err := c.cc.Invoke(ctx, DFS_NotifyMachineDataTransferService_FullMethodName, in, out, cOpts...)
+	out := new(CopyNotificationResponse)
+	err := c.cc.Invoke(ctx, DFS_CopyNotification_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dFSClient) CopyFile(ctx context.Context, in *FileToCopyRequest, opts ...grpc.CallOption) (*FileToCopyResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FileToCopyResponse)
+	err := c.cc.Invoke(ctx, DFS_CopyFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +63,8 @@ func (c *dFSClient) NotifyMachineDataTransferService(ctx context.Context, in *Ma
 // All implementations must embed UnimplementedDFSServer
 // for forward compatibility.
 type DFSServer interface {
-	NotifyMachineDataTransferService(context.Context, *MachineDataTransferRequest) (*MachineDataTransferResponse, error)
+	CopyNotification(context.Context, *CopyNotificationRequest) (*CopyNotificationResponse, error)
+	CopyFile(context.Context, *FileToCopyRequest) (*FileToCopyResponse, error)
 	mustEmbedUnimplementedDFSServer()
 }
 
@@ -62,8 +75,11 @@ type DFSServer interface {
 // pointer dereference when methods are called.
 type UnimplementedDFSServer struct{}
 
-func (UnimplementedDFSServer) NotifyMachineDataTransferService(context.Context, *MachineDataTransferRequest) (*MachineDataTransferResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method NotifyMachineDataTransferService not implemented")
+func (UnimplementedDFSServer) CopyNotification(context.Context, *CopyNotificationRequest) (*CopyNotificationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CopyNotification not implemented")
+}
+func (UnimplementedDFSServer) CopyFile(context.Context, *FileToCopyRequest) (*FileToCopyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CopyFile not implemented")
 }
 func (UnimplementedDFSServer) mustEmbedUnimplementedDFSServer() {}
 func (UnimplementedDFSServer) testEmbeddedByValue()             {}
@@ -86,20 +102,38 @@ func RegisterDFSServer(s grpc.ServiceRegistrar, srv DFSServer) {
 	s.RegisterService(&DFS_ServiceDesc, srv)
 }
 
-func _DFS_NotifyMachineDataTransferService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MachineDataTransferRequest)
+func _DFS_CopyNotification_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CopyNotificationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DFSServer).NotifyMachineDataTransferService(ctx, in)
+		return srv.(DFSServer).CopyNotification(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: DFS_NotifyMachineDataTransferService_FullMethodName,
+		FullMethod: DFS_CopyNotification_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DFSServer).NotifyMachineDataTransferService(ctx, req.(*MachineDataTransferRequest))
+		return srv.(DFSServer).CopyNotification(ctx, req.(*CopyNotificationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DFS_CopyFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FileToCopyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DFSServer).CopyFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DFS_CopyFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DFSServer).CopyFile(ctx, req.(*FileToCopyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -112,8 +146,12 @@ var DFS_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*DFSServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "notifyMachineDataTransferService",
-			Handler:    _DFS_NotifyMachineDataTransferService_Handler,
+			MethodName: "CopyNotification",
+			Handler:    _DFS_CopyNotification_Handler,
+		},
+		{
+			MethodName: "CopyFile",
+			Handler:    _DFS_CopyFile_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

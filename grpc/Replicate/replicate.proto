@@ -1,13 +1,14 @@
 syntax = "proto3";
-option go_package = "github.com/RawanMostafa08/Distributed-File-System/grpc/replicate";
+option go_package = "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate";
 
 package replicate;
 
-message MachineDataTransferRequest {
-    string is_src = 1;
+message CopyNotificationRequest {
+    bool is_src = 1;
+    string file_id = 2;
 }
 
-message MachineDataTransferResponse {
+message CopyNotificationResponse {
     string ack = 1;
 }
 
@@ -20,6 +21,6 @@ message FileToCopyResponse {
 }
 
 service DFS {
-    rpc NotifyMachineDataTransferService(MachineDataTransferRequest) returns (MachineDataTransferResponse);
+    rpc CopyNotification(CopyNotificationRequest) returns (CopyNotificationResponse);
     rpc CopyFile(FileToCopyRequest) returns (FileToCopyResponse);
 }

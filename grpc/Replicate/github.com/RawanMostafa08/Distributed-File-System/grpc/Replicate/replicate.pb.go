@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v3.21.12
-// source: Replicate/replicate.proto
+// source: replicate.proto
 
-package replicate
+package Replicate
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -21,28 +21,29 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type MachineDataTransferRequest struct {
+type CopyNotificationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsSrc         string                 `protobuf:"bytes,1,opt,name=is_src,json=isSrc,proto3" json:"is_src,omitempty"`
+	IsSrc         bool                   `protobuf:"varint,1,opt,name=is_src,json=isSrc,proto3" json:"is_src,omitempty"`
+	FileId        string                 `protobuf:"bytes,2,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MachineDataTransferRequest) Reset() {
-	*x = MachineDataTransferRequest{}
-	mi := &file_Replicate_replicate_proto_msgTypes[0]
+func (x *CopyNotificationRequest) Reset() {
+	*x = CopyNotificationRequest{}
+	mi := &file_replicate_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MachineDataTransferRequest) String() string {
+func (x *CopyNotificationRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MachineDataTransferRequest) ProtoMessage() {}
+func (*CopyNotificationRequest) ProtoMessage() {}
 
-func (x *MachineDataTransferRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_Replicate_replicate_proto_msgTypes[0]
+func (x *CopyNotificationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_replicate_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -53,40 +54,47 @@ func (x *MachineDataTransferRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MachineDataTransferRequest.ProtoReflect.Descriptor instead.
-func (*MachineDataTransferRequest) Descriptor() ([]byte, []int) {
-	return file_Replicate_replicate_proto_rawDescGZIP(), []int{0}
+// Deprecated: Use CopyNotificationRequest.ProtoReflect.Descriptor instead.
+func (*CopyNotificationRequest) Descriptor() ([]byte, []int) {
+	return file_replicate_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *MachineDataTransferRequest) GetIsSrc() string {
+func (x *CopyNotificationRequest) GetIsSrc() bool {
 	if x != nil {
 		return x.IsSrc
+	}
+	return false
+}
+
+func (x *CopyNotificationRequest) GetFileId() string {
+	if x != nil {
+		return x.FileId
 	}
 	return ""
 }
 
-type MachineDataTransferResponse struct {
+type CopyNotificationResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ack           string                 `protobuf:"bytes,1,opt,name=ack,proto3" json:"ack,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *MachineDataTransferResponse) Reset() {
-	*x = MachineDataTransferResponse{}
-	mi := &file_Replicate_replicate_proto_msgTypes[1]
+func (x *CopyNotificationResponse) Reset() {
+	*x = CopyNotificationResponse{}
+	mi := &file_replicate_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *MachineDataTransferResponse) String() string {
+func (x *CopyNotificationResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*MachineDataTransferResponse) ProtoMessage() {}
+func (*CopyNotificationResponse) ProtoMessage() {}
 
-func (x *MachineDataTransferResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_Replicate_replicate_proto_msgTypes[1]
+func (x *CopyNotificationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_replicate_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -97,12 +105,12 @@ func (x *MachineDataTransferResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use MachineDataTransferResponse.ProtoReflect.Descriptor instead.
-func (*MachineDataTransferResponse) Descriptor() ([]byte, []int) {
-	return file_Replicate_replicate_proto_rawDescGZIP(), []int{1}
+// Deprecated: Use CopyNotificationResponse.ProtoReflect.Descriptor instead.
+func (*CopyNotificationResponse) Descriptor() ([]byte, []int) {
+	return file_replicate_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *MachineDataTransferResponse) GetAck() string {
+func (x *CopyNotificationResponse) GetAck() string {
 	if x != nil {
 		return x.Ack
 	}
@@ -118,7 +126,7 @@ type FileToCopyRequest struct {
 
 func (x *FileToCopyRequest) Reset() {
 	*x = FileToCopyRequest{}
-	mi := &file_Replicate_replicate_proto_msgTypes[2]
+	mi := &file_replicate_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -130,7 +138,7 @@ func (x *FileToCopyRequest) String() string {
 func (*FileToCopyRequest) ProtoMessage() {}
 
 func (x *FileToCopyRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_Replicate_replicate_proto_msgTypes[2]
+	mi := &file_replicate_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -143,7 +151,7 @@ func (x *FileToCopyRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileToCopyRequest.ProtoReflect.Descriptor instead.
 func (*FileToCopyRequest) Descriptor() ([]byte, []int) {
-	return file_Replicate_replicate_proto_rawDescGZIP(), []int{2}
+	return file_replicate_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *FileToCopyRequest) GetFileData() string {
@@ -162,7 +170,7 @@ type FileToCopyResponse struct {
 
 func (x *FileToCopyResponse) Reset() {
 	*x = FileToCopyResponse{}
-	mi := &file_Replicate_replicate_proto_msgTypes[3]
+	mi := &file_replicate_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -174,7 +182,7 @@ func (x *FileToCopyResponse) String() string {
 func (*FileToCopyResponse) ProtoMessage() {}
 
 func (x *FileToCopyResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_Replicate_replicate_proto_msgTypes[3]
+	mi := &file_replicate_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -187,7 +195,7 @@ func (x *FileToCopyResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FileToCopyResponse.ProtoReflect.Descriptor instead.
 func (*FileToCopyResponse) Descriptor() ([]byte, []int) {
-	return file_Replicate_replicate_proto_rawDescGZIP(), []int{3}
+	return file_replicate_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *FileToCopyResponse) GetAck() string {
@@ -197,46 +205,47 @@ func (x *FileToCopyResponse) GetAck() string {
 	return ""
 }
 
-var File_Replicate_replicate_proto protoreflect.FileDescriptor
+var File_replicate_proto protoreflect.FileDescriptor
 
-const file_Replicate_replicate_proto_rawDesc = "" +
+const file_replicate_proto_rawDesc = "" +
 	"\n" +
-	"\x19Replicate/replicate.proto\x12\treplicate\"3\n" +
-	"\x1aMachineDataTransferRequest\x12\x15\n" +
-	"\x06is_src\x18\x01 \x01(\tR\x05isSrc\"/\n" +
-	"\x1bMachineDataTransferResponse\x12\x10\n" +
+	"\x0freplicate.proto\x12\treplicate\"I\n" +
+	"\x17CopyNotificationRequest\x12\x15\n" +
+	"\x06is_src\x18\x01 \x01(\bR\x05isSrc\x12\x17\n" +
+	"\afile_id\x18\x02 \x01(\tR\x06fileId\",\n" +
+	"\x18CopyNotificationResponse\x12\x10\n" +
 	"\x03ack\x18\x01 \x01(\tR\x03ack\"0\n" +
 	"\x11FileToCopyRequest\x12\x1b\n" +
 	"\tfile_data\x18\x01 \x01(\tR\bfileData\"&\n" +
 	"\x12FileToCopyResponse\x12\x10\n" +
-	"\x03ack\x18\x01 \x01(\tR\x03ack2\xc1\x01\n" +
-	"\x03DFS\x12q\n" +
-	" NotifyMachineDataTransferService\x12%.replicate.MachineDataTransferRequest\x1a&.replicate.MachineDataTransferResponse\x12G\n" +
-	"\bCopyFile\x12\x1c.replicate.FileToCopyRequest\x1a\x1d.replicate.FileToCopyResponseBBZ@github.com/RawanMostafa08/Distributed-File-System/grpc/replicateb\x06proto3"
+	"\x03ack\x18\x01 \x01(\tR\x03ack2\xab\x01\n" +
+	"\x03DFS\x12[\n" +
+	"\x10CopyNotification\x12\".replicate.CopyNotificationRequest\x1a#.replicate.CopyNotificationResponse\x12G\n" +
+	"\bCopyFile\x12\x1c.replicate.FileToCopyRequest\x1a\x1d.replicate.FileToCopyResponseBBZ@github.com/RawanMostafa08/Distributed-File-System/grpc/Replicateb\x06proto3"
 
 var (
-	file_Replicate_replicate_proto_rawDescOnce sync.Once
-	file_Replicate_replicate_proto_rawDescData []byte
+	file_replicate_proto_rawDescOnce sync.Once
+	file_replicate_proto_rawDescData []byte
 )
 
-func file_Replicate_replicate_proto_rawDescGZIP() []byte {
-	file_Replicate_replicate_proto_rawDescOnce.Do(func() {
-		file_Replicate_replicate_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_Replicate_replicate_proto_rawDesc), len(file_Replicate_replicate_proto_rawDesc)))
+func file_replicate_proto_rawDescGZIP() []byte {
+	file_replicate_proto_rawDescOnce.Do(func() {
+		file_replicate_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_replicate_proto_rawDesc), len(file_replicate_proto_rawDesc)))
 	})
-	return file_Replicate_replicate_proto_rawDescData
+	return file_replicate_proto_rawDescData
 }
 
-var file_Replicate_replicate_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
-var file_Replicate_replicate_proto_goTypes = []any{
-	(*MachineDataTransferRequest)(nil),  // 0: replicate.MachineDataTransferRequest
-	(*MachineDataTransferResponse)(nil), // 1: replicate.MachineDataTransferResponse
-	(*FileToCopyRequest)(nil),           // 2: replicate.FileToCopyRequest
-	(*FileToCopyResponse)(nil),          // 3: replicate.FileToCopyResponse
+var file_replicate_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_replicate_proto_goTypes = []any{
+	(*CopyNotificationRequest)(nil),  // 0: replicate.CopyNotificationRequest
+	(*CopyNotificationResponse)(nil), // 1: replicate.CopyNotificationResponse
+	(*FileToCopyRequest)(nil),        // 2: replicate.FileToCopyRequest
+	(*FileToCopyResponse)(nil),       // 3: replicate.FileToCopyResponse
 }
-var file_Replicate_replicate_proto_depIdxs = []int32{
-	0, // 0: replicate.DFS.NotifyMachineDataTransferService:input_type -> replicate.MachineDataTransferRequest
+var file_replicate_proto_depIdxs = []int32{
+	0, // 0: replicate.DFS.CopyNotification:input_type -> replicate.CopyNotificationRequest
 	2, // 1: replicate.DFS.CopyFile:input_type -> replicate.FileToCopyRequest
-	1, // 2: replicate.DFS.NotifyMachineDataTransferService:output_type -> replicate.MachineDataTransferResponse
+	1, // 2: replicate.DFS.CopyNotification:output_type -> replicate.CopyNotificationResponse
 	3, // 3: replicate.DFS.CopyFile:output_type -> replicate.FileToCopyResponse
 	2, // [2:4] is the sub-list for method output_type
 	0, // [0:2] is the sub-list for method input_type
@@ -245,26 +254,26 @@ var file_Replicate_replicate_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_Replicate_replicate_proto_init() }
-func file_Replicate_replicate_proto_init() {
-	if File_Replicate_replicate_proto != nil {
+func init() { file_replicate_proto_init() }
+func file_replicate_proto_init() {
+	if File_replicate_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_Replicate_replicate_proto_rawDesc), len(file_Replicate_replicate_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_replicate_proto_rawDesc), len(file_replicate_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_Replicate_replicate_proto_goTypes,
-		DependencyIndexes: file_Replicate_replicate_proto_depIdxs,
-		MessageInfos:      file_Replicate_replicate_proto_msgTypes,
+		GoTypes:           file_replicate_proto_goTypes,
+		DependencyIndexes: file_replicate_proto_depIdxs,
+		MessageInfos:      file_replicate_proto_msgTypes,
 	}.Build()
-	File_Replicate_replicate_proto = out.File
-	file_Replicate_replicate_proto_goTypes = nil
-	file_Replicate_replicate_proto_depIdxs = nil
+	File_replicate_proto = out.File
+	file_replicate_proto_goTypes = nil
+	file_replicate_proto_depIdxs = nil
 }

@@ -10,9 +10,13 @@ import (
 	// "strings"
 
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
+	
 	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
 	"google.golang.org/grpc"
 	// "google.golang.org/grpc/peer"
+
+	pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
+
 )
 
 type textServer struct {
@@ -60,6 +64,12 @@ func ReadMP4File(filename string) ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+
+func (s *textServer) CopyNotification(ctx context.Context, req *pb_r.CopyNotificationRequest) (*pb_r.CopyNotificationResponse, error) {
+	fmt.Println("CopyNotification called for:", req.file_id, req.is_src)
+	return &pb_r.CopyNotificationResponse{ack: "Ack"}, nil
 }
 
 

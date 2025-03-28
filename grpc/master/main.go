@@ -11,6 +11,8 @@ import (
 
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
 	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
+	pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
+
 	"google.golang.org/grpc"
 	// "google.golang.org/grpc/peer"
 )
@@ -142,10 +144,38 @@ func selectNodeToCopyTo(fileID string, fileNodes []string) (string,error) {
 
 }
 
+func notify(file FileData, nodeID string,isSrc bool ) {	
+	srcNode,err:=getNodeByID(nodeID)
+	if err != nil {
+		fmt.Println("Error getting node by ID:", err)
+		return
+	}
+	conn, err := grpc.NewClient(fmt.Sprintf("localhost%s", srcNode.Port))
+	if err != nil {
+		fmt.Println("did not connect:", err)
+		return
+	}
+	defer conn.Close()
+	c := pb_r.NewDFSClient(conn)
+	res,err:=c.CopyNotification(context.Background(), &pb_r.CopyNotificationRequest{is_src: isSrc, file_id: file.FileID})	
+	if err != nil {
+		fmt.Println("Error in CopyNotification:", err)
+		return 
+	}
+	fmt.Println("CopyNotification response:", res.Ack)
+}
+
+
 func CopyFileToNode(file FileData, srcNodeID string, destNodeID string) error {
-	//notify machines
+	//notify machines using different threads
 	fmt.Println("Copying ",file.FileID ," from ",srcNodeID, " to ", destNodeID)
-	//copy file
+	go notify(file, srcNodeID, true)
+	go notify(file, destNodeID, false)
+
+
+
+	
+	//copy file to destination node
 	//update lookup table 
 	file= FileData{
 		FileID:   file.FileID,
@@ -171,7 +201,7 @@ func ReplicateFile() {
 		for _, file := range lookupTable {
 			// get all nodes that have this file
 			nodes := getFileNodes(file.FileID);
-			if len(nodes) < 3 && len(nodes) > 0{
+			for len(nodes) < 3 && len(nodes) > 0{
 					valid, err :=selectNodeToCopyTo(file.FileID,nodes)
 					if err != nil {
 						fmt.Println("Error selecting node to copy to:", err)
@@ -181,8 +211,7 @@ func ReplicateFile() {
 						fmt.Errorf("Error copying file")
 					}
 				}
-			}else {
-				fmt.Println("File is already replicated in 3 nodes")
+				nodes = getFileNodes(file.FileID);
 			}
 		}
 
