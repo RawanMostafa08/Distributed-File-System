@@ -22,6 +22,10 @@ type textServer struct {
 	pb.UnimplementedDFSServer
 }
 
+type HeartBeatServer struct {
+	pbHeartBeats.UnimplementedHeartbeatServiceServer
+}
+
 func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFileRequestBody) (*pb.DownloadFileResponseBody, error) {
 	fmt.Println("DownloadFileRequest called for:", req.FileName, "Range:", req.Start, "-", req.End)
 
@@ -83,34 +87,27 @@ func ReadMP4File(filename string) ([]byte, error) {
 // 		time.Sleep(time.Second)
 // 	}
 // }
-func pingMaster(nodeIndex int32, masterAddress string) error {
-    heartBeat := &pbHeartBeats.HeartbeatRequest{NodeId: "Node_" + fmt.Sprint(nodeIndex)}
-
-    // Move connection setup outside loop
-    conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
-    if err != nil {
-        fmt.Println("Did not connect:", err)
-        return err
-    }
-    defer conn.Close()
-
-    master := pbHeartBeats.NewHeartbeatServiceClient(conn)
-
+func pingMaster(nodeIndex int32, masterAddress string) {
     for {
-        fmt.Println("Node_" + fmt.Sprint(nodeIndex) + " is pinging master...")
-
-        // // Use a timeout to prevent blocking
-        // ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-        // defer cancel()
-
-        _, err := master.KeepAlive(context.Background(), heartBeat)
+        conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
         if err != nil {
-            fmt.Println("Error in pinging master:", err)
-        } else {
-            fmt.Println("Ping successful")
+            fmt.Printf("Failed to connect to master: %v. Retrying...\n", err)
+            time.Sleep(2 * time.Second)
+            continue
         }
 
-        time.Sleep(time.Second)
+        master := pbHeartBeats.NewHeartbeatServiceClient(conn)
+        for {
+            _, err := master.KeepAlive(context.Background(), &pbHeartBeats.HeartbeatRequest{
+                NodeId: fmt.Sprintf("Node_%d", nodeIndex),
+            })
+            if err != nil {
+                fmt.Printf("Heartbeat failed: %v. Reconnecting...\n", err)
+                conn.Close()
+                break // Exit inner loop to reconnect
+            }
+            time.Sleep(1 * time.Second)
+        }
     }
 }
 
@@ -129,7 +126,8 @@ func main() {
 	nodes := []string{}
 
 	pbUtils.ReadFile(&masterAddress,&clientAddress,&nodes)
-	
+	nodes[node_index] = "localhost:3000"
+	masterAddress="localhost:8080"
 	lis, err := net.Listen("tcp", nodes[node_index])
 	if err != nil {
 		fmt.Println("failed to listen:", err)
@@ -138,8 +136,8 @@ func main() {
 	s := grpc.NewServer()
 	pb.RegisterDFSServer(s, &textServer{})
 	fmt.Println("Server started. Listening on port ",nodes[node_index],"...")
+	go pingMaster(node_index,masterAddress)
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
 	}
-	go pingMaster(node_index,masterAddress)
 }
