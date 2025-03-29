@@ -77,14 +77,14 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 	}
 	defer conn.Close()
 
-	// masterClient := pb.NewDFSClient(conn)
-	// _, err = masterClient.NodeMasterAckRequest(ctx, &pb.NodeMasterAckRequestBody{
-	// 	Status: true,
-	// })
+	masterClient := pb.NewDFSClient(conn)
+	_, err = masterClient.NodeMasterAckRequest(ctx, &pb.NodeMasterAckRequestBody{
+		Status: true,
+	})
 
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to notify master: %v", err)
-	// }
+	if err != nil {
+		return nil, fmt.Errorf("failed to notify master: %v", err)
+	}
 
 	fmt.Printf("File %s saved successfully and master notified\n", req.FileName)
 	return &pb.Empty{}, nil
