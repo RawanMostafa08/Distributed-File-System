@@ -28,6 +28,7 @@ type CopyNotificationRequest struct {
 	FilePath      string                 `protobuf:"bytes,3,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
 	DestIp        string                 `protobuf:"bytes,4,opt,name=dest_ip,json=destIp,proto3" json:"dest_ip,omitempty"`
 	DestPort      string                 `protobuf:"bytes,5,opt,name=dest_port,json=destPort,proto3" json:"dest_port,omitempty"`
+	DestId        string                 `protobuf:"bytes,6,opt,name=dest_id,json=destId,proto3" json:"dest_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -97,6 +98,13 @@ func (x *CopyNotificationRequest) GetDestPort() string {
 	return ""
 }
 
+func (x *CopyNotificationRequest) GetDestId() string {
+	if x != nil {
+		return x.DestId
+	}
+	return ""
+}
+
 type CopyNotificationResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ack           string                 `protobuf:"bytes,1,opt,name=ack,proto3" json:"ack,omitempty"`
@@ -145,6 +153,7 @@ type CopyFileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FileName      string                 `protobuf:"bytes,1,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
 	FileData      []byte                 `protobuf:"bytes,2,opt,name=file_data,json=fileData,proto3" json:"file_data,omitempty"`
+	DestId        string                 `protobuf:"bytes,3,opt,name=dest_id,json=destId,proto3" json:"dest_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -191,6 +200,13 @@ func (x *CopyFileRequest) GetFileData() []byte {
 		return x.FileData
 	}
 	return nil
+}
+
+func (x *CopyFileRequest) GetDestId() string {
+	if x != nil {
+		return x.DestId
+	}
+	return ""
 }
 
 type CopyFileResponse struct {
@@ -241,18 +257,20 @@ var File_replicate_proto protoreflect.FileDescriptor
 
 const file_replicate_proto_rawDesc = "" +
 	"\n" +
-	"\x0freplicate.proto\x12\tReplicate\"\xa0\x01\n" +
+	"\x0freplicate.proto\x12\tReplicate\"\xb9\x01\n" +
 	"\x17CopyNotificationRequest\x12\x15\n" +
 	"\x06is_src\x18\x01 \x01(\bR\x05isSrc\x12\x1b\n" +
 	"\tfile_name\x18\x02 \x01(\tR\bfileName\x12\x1b\n" +
 	"\tfile_path\x18\x03 \x01(\tR\bfilePath\x12\x17\n" +
 	"\adest_ip\x18\x04 \x01(\tR\x06destIp\x12\x1b\n" +
-	"\tdest_port\x18\x05 \x01(\tR\bdestPort\",\n" +
+	"\tdest_port\x18\x05 \x01(\tR\bdestPort\x12\x17\n" +
+	"\adest_id\x18\x06 \x01(\tR\x06destId\",\n" +
 	"\x18CopyNotificationResponse\x12\x10\n" +
-	"\x03ack\x18\x01 \x01(\tR\x03ack\"K\n" +
+	"\x03ack\x18\x01 \x01(\tR\x03ack\"d\n" +
 	"\x0fCopyFileRequest\x12\x1b\n" +
 	"\tfile_name\x18\x01 \x01(\tR\bfileName\x12\x1b\n" +
-	"\tfile_data\x18\x02 \x01(\fR\bfileData\"$\n" +
+	"\tfile_data\x18\x02 \x01(\fR\bfileData\x12\x17\n" +
+	"\adest_id\x18\x03 \x01(\tR\x06destId\"$\n" +
 	"\x10CopyFileResponse\x12\x10\n" +
 	"\x03ack\x18\x01 \x01(\tR\x03ack2\xa7\x01\n" +
 	"\x03DFS\x12[\n" +

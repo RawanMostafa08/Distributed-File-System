@@ -23,7 +23,7 @@ type textServer struct {
 	pb.UnimplementedDFSServer
 }
 
-type copyNotificationServer struct {
+type replicateServer struct {
 	pb_r.UnimplementedDFSServer
 }
 
@@ -70,35 +70,42 @@ func ReadMP4File(filename string) ([]byte, error) {
 	return data, nil
 }
 
+func (s *replicateServer) CopyFile(ctx context.Context, req *pb_r.CopyFileRequest) (*pb_r.CopyFileResponse, error) {
+	filePath := fmt.Sprintf("files/%s/%s", req.DestId, req.FileName)
+	err := os.WriteFile(filePath, req.FileData, 0644)
+	if err != nil {
+		fmt.Println("Error writing file:", err)
+		return nil, err
+	}
+	fmt.Println("File copied successfully to:", filePath)
+	return &pb_r.CopyFileResponse{Ack: "ACK"}, nil
+}
 
-func (s *copyNotificationServer) CopyNotification(ctx context.Context, req *pb_r.CopyNotificationRequest) (*pb_r.CopyNotificationResponse, error) {
-	filePath:=fmt.Sprintf("%s/%s",req.FilePath,req.FileName)
-	fileContent, err := ioutil.ReadFile(filePath) 
-    if err != nil {
-        return nil, err
-    }
-
-	conn, err := grpc.Dial(fmt.Sprintf("%s%s",req.DestIp ,req.DestPort), grpc.WithInsecure())
+func (s *replicateServer) CopyNotification(ctx context.Context, req *pb_r.CopyNotificationRequest) (*pb_r.CopyNotificationResponse, error) {
+	filePath := fmt.Sprintf("%s/%s", req.FilePath, req.FileName)
+	fileContent, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+	conn, err := grpc.Dial(fmt.Sprintf("%s%s", req.DestIp, req.DestPort), grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("did not connect:", err)
-		return nil,err
+		return nil, err
 	}
 	defer conn.Close()
 
 	c := pb_r.NewDFSClient(conn)
-	res,err:=c.CopyFile(context.Background(), &pb_r.CopyFileRequest{FileName: req.FileName, FileData: fileContent})	
+	res, err := c.CopyFile(context.Background(), &pb_r.CopyFileRequest{FileName: req.FileName, FileData: fileContent, DestId: req.DestId })
 	if err != nil {
 		fmt.Println("Error in CopyFile:", err)
-		return nil,err
+		return nil, err
 	}
-	if res.Ack=="ACK"{
-		return &pb_r.CopyNotificationResponse{Ack: "Ack"},nil
-	} 
-	return nil,errors.New("File not copied to destination node")
+	if res.Ack == "ACK" {
+		return &pb_r.CopyNotificationResponse{Ack: "Ack"}, nil
+	}
+	return nil, errors.New("File not copied to destination node")
 
 }
-
-
 
 func main() {
 
@@ -106,13 +113,12 @@ func main() {
 	fmt.Print("Enter node index : ")
 	var node_index int32
 	fmt.Scanln(&node_index)
-		
 
 	var masterAddress, clientAddress string
 	nodes := []string{}
 
-	pbUtils.ReadFile(&masterAddress,&clientAddress,&nodes)
-	
+	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
+
 	lis, err := net.Listen("tcp", nodes[node_index])
 	if err != nil {
 		fmt.Println("failed to listen:", err)
@@ -120,8 +126,8 @@ func main() {
 	}
 	s := grpc.NewServer()
 	pb.RegisterDFSServer(s, &textServer{})
-	pb_r.RegisterDFSServer(s, &copyNotificationServer{})
-	fmt.Println("Server started. Listening on port ",nodes[node_index],"...")
+	pb_r.RegisterDFSServer(s, &replicateServer{})
+	fmt.Println("Server started. Listening on port ", nodes[node_index], "...")
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
 	}
