@@ -21,7 +21,7 @@ type textClientServer struct{
 }
 
 func (s *textClientServer) MasterClientAckRequestUpload(ctx context.Context, req *pb.MasterClientAckRequestBodyUpload) (*pb.Empty, error) {
-	fmt.Println(req.Message)
+	fmt.Printf("6. Client notified-> %s",req.Message)
 	return &pb.Empty{}, nil
 }
 func startClientServer(clientAddress string) {
@@ -38,7 +38,6 @@ func startClientServer(clientAddress string) {
 	}
 }
 
-
 func requestUploadPort(masterAddress string) (*pb.UploadResponseBody, error) {
 	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
 	if err != nil {
@@ -54,6 +53,8 @@ func requestUploadPort(masterAddress string) (*pb.UploadResponseBody, error) {
 		fmt.Println("Error calling UploadRequest:", err)
 		return nil, err
 	}
+	fmt.Printf("2. Client received node address %s:%s",resp.DataNode_IP, resp.SelectedPort)
+
 	return resp, nil
 }
 
@@ -197,7 +198,6 @@ func main() {
 			fmt.Println("Error getting upload port:", err)
 			return
 		}
-		fmt.Println(resp.DataNode_IP, resp.SelectedPort)
 
 		// Upload file to selected data node
 		dataNodeAddress := fmt.Sprintf("%s:%s", resp.DataNode_IP, resp.SelectedPort)
@@ -206,8 +206,6 @@ func main() {
 			fmt.Println("Error uploading file:", err)
 			return
 		}
-
-		fmt.Println("File uploaded successfully!")
 
 	case 2:
 		// Existing download logic

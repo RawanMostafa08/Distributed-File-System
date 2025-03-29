@@ -48,7 +48,7 @@ func getNodeByID(nodeID string) (DataNode, error) {
 }
 
 func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadRequestBody) (*pb.UploadResponseBody, error) {
-
+	fmt.Println("1.Master received upload request")
 	return &pb.UploadResponseBody{
 		DataNode_IP:  dataNodes[0].IP,
 		SelectedPort: dataNodes[0].Port,
@@ -65,7 +65,7 @@ func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.Nod
 
 	lookupTable = append(lookupTable, newFile)
 
-	fmt.Printf("Added file to lookup table: %s on node %s\n", req.FileName, req.DataNodeAddress)
+	fmt.Printf("4,5. Master notified and added file to lookup table: %s on node %s\n", req.FileName, req.DataNodeAddress)
 	conn, err := grpc.Dial(s.clientAddress, grpc.WithInsecure())
     if err != nil {
         fmt.Println("Failed to connect to client:", err)
@@ -121,7 +121,6 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 
 func main() {
 
-	fmt.Println("master started...")
 	var masterAddress, clientAddress string
 	nodes := []string{}
 

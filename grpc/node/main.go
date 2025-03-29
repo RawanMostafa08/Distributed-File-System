@@ -92,7 +92,7 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 		return nil, fmt.Errorf("failed to notify master: %v", err)
 	}
 
-	fmt.Printf("File %s saved successfully and master notified\n", req.FileName)
+	fmt.Printf("3,4. File %s saved successfully\n", req.FileName)
 	return &pb.Empty{}, nil
 
 }
