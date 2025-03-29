@@ -1,0 +1,13 @@
+syntax = "proto3";
+option go_package = "github.com/RawanMostafa08/Distributed-File-System/grpc/HeartBeats";
+
+package ping;
+message Empty {}
+
+service HeartbeatService {
+    rpc KeepAlive (HeartbeatRequest) returns (Empty);
+}
+
+message HeartbeatRequest {
+    string node_id = 1;
+}
