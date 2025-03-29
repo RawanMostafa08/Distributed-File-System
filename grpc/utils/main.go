@@ -7,7 +7,12 @@ import (
 	"bufio"
 )
 
-func ReadFile(masterAddress,clientAddress *string,nodes *[]string)(){
+type Node struct {
+	IP   string
+	Port string
+}
+
+func ReadFile(masterAddress,clientAddress *string,nodes *[]Node)(){
 	// Open the file
 	file, err := os.Open("config.txt")
 	if err != nil {
@@ -27,6 +32,9 @@ func ReadFile(masterAddress,clientAddress *string,nodes *[]string)(){
 
 		key := strings.TrimSpace(parts[0])
 		value := strings.TrimSpace(parts[1])
+		valueParts := strings.Split(value, ":")
+		ip := valueParts[0]
+		port := valueParts[1]
 
 		switch key {
 		case "Master_Address":
@@ -35,8 +43,13 @@ func ReadFile(masterAddress,clientAddress *string,nodes *[]string)(){
 			*clientAddress = value
 		default:
 			if strings.HasPrefix(key, "Node") {
-				*nodes = append(*nodes, value)
-			}
+				*nodes = append(*nodes, struct {
+					IP   string
+					Port string
+				}{
+					IP:   ip,
+					Port: port,
+				})
 		}
 	}
 
@@ -44,4 +57,5 @@ func ReadFile(masterAddress,clientAddress *string,nodes *[]string)(){
 		fmt.Println("Error reading file:", err)
 		return 
 	}
+}
 }

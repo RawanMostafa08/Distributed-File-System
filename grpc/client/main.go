@@ -3,19 +3,19 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"math"
-	"sync"
 	"os"
-	// "net"
+	"path/filepath"
+	"sync"
+
 	"google.golang.org/grpc"
-	// "google.golang.org/protobuf/internal/encoding/text"
-	// ""
+
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload" // Import the generated package
 	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
-	// "google.golang.org/grpc"
 )
 
-func requestDownloadPorts(masterAddress string , file_name string) (*pb.DownloadPortsResponseBody, error) {
+func requestUploadPort(masterAddress string) (*pb.UploadResponseBody, error) {
 	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("did not connect:", err)
@@ -23,7 +23,57 @@ func requestDownloadPorts(masterAddress string , file_name string) (*pb.Download
 	}
 	defer conn.Close()
 	c := pb.NewDFSClient(conn)
-	fmt.Println("Connected to Master",c)
+
+	// Call the RPC method
+	resp, err := c.UploadPortsRequest(context.Background(), &pb.UploadRequestBody{MasterAddress: masterAddress})
+	if err != nil {
+		fmt.Println("Error calling UploadRequest:", err)
+		return nil, err
+	}
+	return resp, nil
+}
+
+func uploadFile(nodeAddress, filePath string) error {
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("error opening file %v",err)
+	}
+	defer file.Close()
+    fileName := filepath.Base(filePath)
+
+	// Read file content
+	fileData, err := io.ReadAll(file)
+	if err != nil {
+		return fmt.Errorf("error reading file %v",err)
+	}
+
+	// Connect to data node
+	conn, err := grpc.Dial(nodeAddress, grpc.WithInsecure())
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	c := pb.NewDFSClient(conn)
+
+	// Upload file to data node
+	_, err = c.UploadFileRequest(context.Background(), &pb.UploadFileRequestBody{
+		NodeAddress: nodeAddress,
+		FileData:    fileData,
+		FileName: fileName,
+	})
+	return err
+}
+
+func requestDownloadPorts(masterAddress string, file_name string) (*pb.DownloadPortsResponseBody, error) {
+	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
+	if err != nil {
+		fmt.Println("did not connect:", err)
+		return nil, err
+	}
+	defer conn.Close()
+	c := pb.NewDFSClient(conn)
+	fmt.Println("Connected to Master", c)
 
 	// Call the RPC method
 	resp, err := c.DownloadPortsRequest(context.Background(), &pb.DownloadPortsRequestBody{FileName: file_name})
@@ -32,10 +82,9 @@ func requestDownloadPorts(masterAddress string , file_name string) (*pb.Download
 		fmt.Println("Error calling DownloadPortsRequest:", err)
 		return nil, err
 	}
-	return resp,nil
+	return resp, nil
 
 }
-
 
 func requestDownloadFile(nodeAddress, fileName string, start, end int64, wg *sync.WaitGroup, chunks map[int][]byte, index int, mu *sync.Mutex) {
 	defer wg.Done()
@@ -78,7 +127,6 @@ func downloadFile(Addresses []string, file_name string, fileSize int64) {
 
 	wg.Wait()
 
-
 	// Reconstruct the file
 	outputFile, err := os.Create(file_name)
 	if err != nil {
@@ -99,28 +147,63 @@ func downloadFile(Addresses []string, file_name string, fileSize int64) {
 
 func main() {
 
+	// read parties addresses
 	var masterAddress, clientAddress string
-	nodes := []string{}
+	nodes := []pbUtils.Node{}
+	fmt.Println("Choose operation:")
+	fmt.Println("1. Upload file")
+	fmt.Println("2. Download file")
+	var choice int
+	fmt.Scanln(&choice)
 
-	// Download Logic
-	// Read input from user
-	fmt.Print("Enter File Name To Download : ")
-	var file_name string
-	fmt.Scanln(&file_name)
-		
+	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
 
-	pbUtils.ReadFile(&masterAddress,&clientAddress,&nodes)
-	// Connect to Master to get download ports
-	var resp *pb.DownloadPortsResponseBody 
-	var err error
-	resp , err = requestDownloadPorts(masterAddress , file_name)		
-	if err != nil {
-		fmt.Println("Error calling DownloadPortsRequest:", err)
-		return
+	switch choice {
+	case 1:
+		// Upload logic
+		fmt.Print("Enter file path to upload: ")
+		var filePath string
+		fmt.Scanln(&filePath)
+
+		// Get available data node from master
+		resp, err := requestUploadPort(masterAddress)
+		if err != nil {
+			fmt.Println("Error getting upload port:", err)
+			return
+		}
+		fmt.Println(resp.DataNode_IP, resp.SelectedPort)
+
+		// Upload file to selected data node
+		dataNodeAddress := fmt.Sprintf("%s:%s", resp.DataNode_IP, resp.SelectedPort)
+		err = uploadFile(dataNodeAddress, filePath)
+		if err != nil {
+			fmt.Println("Error uploading file:", err)
+			return
+		}
+
+		fmt.Println("File uploaded successfully!")
+
+	case 2:
+		// Existing download logic
+		fmt.Print("Enter File Name To Download: ")
+		var file_name string
+		fmt.Scanln(&file_name)
+
+		// Connect to Master to get download ports
+		var resp *pb.DownloadPortsResponseBody
+		var err error
+		resp, err = requestDownloadPorts(masterAddress, file_name)
+		if err != nil {
+			fmt.Println("Error calling DownloadPortsRequest:", err)
+			return
+		}
+		fmt.Println("Nodes Master:", resp.Addresses)
+
+		fileSize := resp.FileSize
+
+		downloadFile(resp.Addresses, file_name, fileSize)
+	default:
+		fmt.Println("Invalid choice")
 	}
-	fmt.Println("Nodes Master:", resp.Addresses)
-	
-	fileSize := resp.FileSize
 
-	downloadFile(resp.Addresses, file_name, fileSize)
 }

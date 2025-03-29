@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
-	"io/ioutil"
-	"os"
 	"io"
+	"io/ioutil"
+	"net"
+	"os"
+	"path/filepath"
+
 	// "strings"
 
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
@@ -17,6 +19,7 @@ import (
 
 type textServer struct {
 	pb.UnimplementedDFSServer
+	masterAddress string
 }
 
 func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFileRequestBody) (*pb.DownloadFileResponseBody, error) {
@@ -53,6 +56,40 @@ func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFi
 	return &pb.DownloadFileResponseBody{FileData: data}, nil
 }
 
+
+func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRequestBody) (*pb.Empty, error) {
+
+	if err := os.MkdirAll("grpc/files", os.ModePerm); err != nil {
+		return nil, fmt.Errorf("failed to create directory: %v", err)
+	}
+
+	// Save the file
+	filePath := filepath.Join("grpc", "files", req.FileName)
+	if err := ioutil.WriteFile(filePath, req.FileData, 0644); err != nil {
+		return nil, fmt.Errorf("failed to save file: %v", err)
+	}
+
+
+	// Notify master tracker
+	conn, err := grpc.Dial(s.masterAddress, grpc.WithInsecure())
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to master: %v", err)
+	}
+	defer conn.Close()
+
+	// masterClient := pb.NewDFSClient(conn)
+	// _, err = masterClient.NodeMasterAckRequest(ctx, &pb.NodeMasterAckRequestBody{
+	// 	Status: true,
+	// })
+
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to notify master: %v", err)
+	// }
+
+	fmt.Printf("File %s saved successfully and master notified\n", req.FileName)
+	return &pb.Empty{}, nil
+}
+
 // ReadMP4File reads an MP4 file and returns its content as a byte slice.
 func ReadMP4File(filename string) ([]byte, error) {
 	data, err := ioutil.ReadFile(filename)
@@ -62,29 +99,28 @@ func ReadMP4File(filename string) ([]byte, error) {
 	return data, nil
 }
 
-
-
 func main() {
 
 	// Read input from user
 	fmt.Print("Enter node index : ")
 	var node_index int32
 	fmt.Scanln(&node_index)
-		
 
 	var masterAddress, clientAddress string
-	nodes := []string{}
+	nodes := []pbUtils.Node{}
 
-	pbUtils.ReadFile(&masterAddress,&clientAddress,&nodes)
-	
-	lis, err := net.Listen("tcp", nodes[node_index])
+	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s",nodes[node_index].Port))
 	if err != nil {
 		fmt.Println("failed to listen:", err)
 		return
 	}
 	s := grpc.NewServer()
-	pb.RegisterDFSServer(s, &textServer{})
-	fmt.Println("Server started. Listening on port ",nodes[node_index],"...")
+	pb.RegisterDFSServer(s, &textServer{
+		masterAddress: masterAddress,
+	})
+	fmt.Println("Server started. Listening on port ", nodes[node_index].Port, "...")
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
 	}
