@@ -5,16 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	// "strings"
 
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
 	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
-	pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
 
 	"google.golang.org/grpc"
 	// "google.golang.org/grpc/peer"
+
+	pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
 )
 
 type DataNode struct {
@@ -106,7 +108,7 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 }
 
 // Replicate Helper Functions
-func getFileNodes(fileID string)  []string {
+func getFileNodes(fileID string)  ([]string) {
 	nodes := []string{}
 	for _, f := range lookupTable {
 		filenode,err:=getNodeByID(f.NodeID)
@@ -118,6 +120,23 @@ func getFileNodes(fileID string)  []string {
 	}
 	return  nodes
 }
+
+func getSrcFileInfo(file FileData, nodes []string) (FileData,error) {
+	for _,node := range nodes {
+		if node == file.NodeID {
+			file = FileData{
+				FileID:   file.FileID,
+				Filename: file.Filename,
+				FilePath: file.FilePath,
+				FileSize: file.FileSize,
+				NodeID: file.NodeID,
+			}
+			return file,nil
+		}
+	}
+	return FileData{}, errors.New("Node not found")
+}
+
 
 func selectNodeToCopyTo(fileID string, fileNodes []string) (string,error) {
 	// alive node , not in the list of nodes that have the file
@@ -144,20 +163,21 @@ func selectNodeToCopyTo(fileID string, fileNodes []string) (string,error) {
 
 }
 
-func notify(file FileData, nodeID string,isSrc bool ) {	
+func notify(srcfile FileData, nodeID string,isSrc bool ,wg *sync.WaitGroup) {	
+	defer wg.Done()
 	srcNode,err:=getNodeByID(nodeID)
 	if err != nil {
 		fmt.Println("Error getting node by ID:", err)
 		return
 	}
-	conn, err := grpc.NewClient(fmt.Sprintf("localhost%s", srcNode.Port))
+	conn, err := grpc.Dial(fmt.Sprintf("localhost%s", srcNode.Port), grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return
 	}
 	defer conn.Close()
 	c := pb_r.NewDFSClient(conn)
-	res,err:=c.CopyNotification(context.Background(), &pb_r.CopyNotificationRequest{is_src: isSrc, file_id: file.FileID})	
+	res,err:=c.CopyNotification(context.Background(), &pb_r.CopyNotificationRequest{IsSrc: isSrc, FileName: srcfile.Filename,FilePath: srcfile.FilePath})	
 	if err != nil {
 		fmt.Println("Error in CopyNotification:", err)
 		return 
@@ -166,22 +186,23 @@ func notify(file FileData, nodeID string,isSrc bool ) {
 }
 
 
-func CopyFileToNode(file FileData, srcNodeID string, destNodeID string) error {
+func copyFileToNode(srcfile FileData,  destNodeID string) error {
 	//notify machines using different threads
-	fmt.Println("Copying ",file.FileID ," from ",srcNodeID, " to ", destNodeID)
-	go notify(file, srcNodeID, true)
-	go notify(file, destNodeID, false)
-
-
-
-	
+	srcNodeID:= srcfile.NodeID
+	fmt.Println("Copying ",srcfile.FileID ," from ",srcNodeID, " to ", destNodeID)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go notify(srcfile, srcNodeID, true, &wg)
+	wg.Wait()
+	fmt.Println("Both src and dest notified")
 	//copy file to destination node
+	
 	//update lookup table 
-	file= FileData{
-		FileID:   file.FileID,
-		Filename: file.Filename,
-		FilePath: file.FilePath,
-		FileSize: file.FileSize,
+	file:= FileData{
+		FileID:   srcfile.FileID,
+		Filename: srcfile.Filename,
+		FilePath: srcfile.FilePath,
+		FileSize: srcfile.FileSize,
 		NodeID: destNodeID,}
 	lookupTable = append(lookupTable, file)
 	return nil
@@ -201,12 +222,16 @@ func ReplicateFile() {
 		for _, file := range lookupTable {
 			// get all nodes that have this file
 			nodes := getFileNodes(file.FileID);
+			srcFile,err:=getSrcFileInfo(file,nodes )
+			if err != nil {
+				fmt.Println("Error getting source node ID:", err)
+			}else{
 			for len(nodes) < 3 && len(nodes) > 0{
 					valid, err :=selectNodeToCopyTo(file.FileID,nodes)
 					if err != nil {
 						fmt.Println("Error selecting node to copy to:", err)
 					}else{
-					err = CopyFileToNode(file, nodes[0], valid)
+					err = copyFileToNode(srcFile, valid)
 					if err != nil {
 						fmt.Errorf("Error copying file")
 					}
@@ -214,6 +239,7 @@ func ReplicateFile() {
 				nodes = getFileNodes(file.FileID);
 			}
 		}
+	}
 
 	}
 }
@@ -242,6 +268,7 @@ func main() {
 
 	s := grpc.NewServer()
 	pb.RegisterDFSServer(s, &textServer{})
+	
 	fmt.Println("Server started. Listening on port 8080...")
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)

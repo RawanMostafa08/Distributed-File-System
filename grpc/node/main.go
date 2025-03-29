@@ -2,25 +2,29 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"net"
-	"io/ioutil"
-	"os"
 	"io"
+	"io/ioutil"
+	"net"
+	"os"
+
 	// "strings"
 
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
-	
+
 	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
 	"google.golang.org/grpc"
-	// "google.golang.org/grpc/peer"
 
 	pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
-
 )
 
 type textServer struct {
 	pb.UnimplementedDFSServer
+}
+
+type copyNotificationServer struct {
+	pb_r.UnimplementedDFSServer
 }
 
 func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFileRequestBody) (*pb.DownloadFileResponseBody, error) {
@@ -67,9 +71,31 @@ func ReadMP4File(filename string) ([]byte, error) {
 }
 
 
-func (s *textServer) CopyNotification(ctx context.Context, req *pb_r.CopyNotificationRequest) (*pb_r.CopyNotificationResponse, error) {
-	fmt.Println("CopyNotification called for:", req.file_id, req.is_src)
-	return &pb_r.CopyNotificationResponse{ack: "Ack"}, nil
+func (s *copyNotificationServer) CopyNotification(ctx context.Context, req *pb_r.CopyNotificationRequest) (*pb_r.CopyNotificationResponse, error) {
+	filePath:=fmt.Sprintf("%s/%s",req.FilePath,req.FileName)
+	fileContent, err := ioutil.ReadFile(filePath) 
+    if err != nil {
+        return nil, err
+    }
+
+	conn, err := grpc.Dial(fmt.Sprintf("%s%s",req.DestIp ,req.DestPort), grpc.WithInsecure())
+	if err != nil {
+		fmt.Println("did not connect:", err)
+		return nil,err
+	}
+	defer conn.Close()
+
+	c := pb_r.NewDFSClient(conn)
+	res,err:=c.CopyFile(context.Background(), &pb_r.CopyFileRequest{FileName: req.FileName, FileData: fileContent})	
+	if err != nil {
+		fmt.Println("Error in CopyFile:", err)
+		return nil,err
+	}
+	if res.Ack=="ACK"{
+		return &pb_r.CopyNotificationResponse{Ack: "Ack"},nil
+	} 
+	return nil,errors.New("File not copied to destination node")
+
 }
 
 
@@ -94,6 +120,7 @@ func main() {
 	}
 	s := grpc.NewServer()
 	pb.RegisterDFSServer(s, &textServer{})
+	pb_r.RegisterDFSServer(s, &copyNotificationServer{})
 	fmt.Println("Server started. Listening on port ",nodes[node_index],"...")
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)

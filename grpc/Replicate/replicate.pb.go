@@ -4,7 +4,7 @@
 // 	protoc        v3.21.12
 // source: replicate.proto
 
-package Replicate
+package __
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -24,7 +24,10 @@ const (
 type CopyNotificationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	IsSrc         bool                   `protobuf:"varint,1,opt,name=is_src,json=isSrc,proto3" json:"is_src,omitempty"`
-	FileId        string                 `protobuf:"bytes,2,opt,name=file_id,json=fileId,proto3" json:"file_id,omitempty"`
+	FileName      string                 `protobuf:"bytes,2,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	FilePath      string                 `protobuf:"bytes,3,opt,name=file_path,json=filePath,proto3" json:"file_path,omitempty"`
+	DestIp        string                 `protobuf:"bytes,4,opt,name=dest_ip,json=destIp,proto3" json:"dest_ip,omitempty"`
+	DestPort      string                 `protobuf:"bytes,5,opt,name=dest_port,json=destPort,proto3" json:"dest_port,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -66,9 +69,30 @@ func (x *CopyNotificationRequest) GetIsSrc() bool {
 	return false
 }
 
-func (x *CopyNotificationRequest) GetFileId() string {
+func (x *CopyNotificationRequest) GetFileName() string {
 	if x != nil {
-		return x.FileId
+		return x.FileName
+	}
+	return ""
+}
+
+func (x *CopyNotificationRequest) GetFilePath() string {
+	if x != nil {
+		return x.FilePath
+	}
+	return ""
+}
+
+func (x *CopyNotificationRequest) GetDestIp() string {
+	if x != nil {
+		return x.DestIp
+	}
+	return ""
+}
+
+func (x *CopyNotificationRequest) GetDestPort() string {
+	if x != nil {
+		return x.DestPort
 	}
 	return ""
 }
@@ -117,27 +141,28 @@ func (x *CopyNotificationResponse) GetAck() string {
 	return ""
 }
 
-type FileToCopyRequest struct {
+type CopyFileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	FileData      string                 `protobuf:"bytes,1,opt,name=file_data,json=fileData,proto3" json:"file_data,omitempty"`
+	FileName      string                 `protobuf:"bytes,1,opt,name=file_name,json=fileName,proto3" json:"file_name,omitempty"`
+	FileData      []byte                 `protobuf:"bytes,2,opt,name=file_data,json=fileData,proto3" json:"file_data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *FileToCopyRequest) Reset() {
-	*x = FileToCopyRequest{}
+func (x *CopyFileRequest) Reset() {
+	*x = CopyFileRequest{}
 	mi := &file_replicate_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *FileToCopyRequest) String() string {
+func (x *CopyFileRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*FileToCopyRequest) ProtoMessage() {}
+func (*CopyFileRequest) ProtoMessage() {}
 
-func (x *FileToCopyRequest) ProtoReflect() protoreflect.Message {
+func (x *CopyFileRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_replicate_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -149,39 +174,46 @@ func (x *FileToCopyRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use FileToCopyRequest.ProtoReflect.Descriptor instead.
-func (*FileToCopyRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use CopyFileRequest.ProtoReflect.Descriptor instead.
+func (*CopyFileRequest) Descriptor() ([]byte, []int) {
 	return file_replicate_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *FileToCopyRequest) GetFileData() string {
+func (x *CopyFileRequest) GetFileName() string {
 	if x != nil {
-		return x.FileData
+		return x.FileName
 	}
 	return ""
 }
 
-type FileToCopyResponse struct {
+func (x *CopyFileRequest) GetFileData() []byte {
+	if x != nil {
+		return x.FileData
+	}
+	return nil
+}
+
+type CopyFileResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ack           string                 `protobuf:"bytes,1,opt,name=ack,proto3" json:"ack,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *FileToCopyResponse) Reset() {
-	*x = FileToCopyResponse{}
+func (x *CopyFileResponse) Reset() {
+	*x = CopyFileResponse{}
 	mi := &file_replicate_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *FileToCopyResponse) String() string {
+func (x *CopyFileResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*FileToCopyResponse) ProtoMessage() {}
+func (*CopyFileResponse) ProtoMessage() {}
 
-func (x *FileToCopyResponse) ProtoReflect() protoreflect.Message {
+func (x *CopyFileResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_replicate_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -193,12 +225,12 @@ func (x *FileToCopyResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use FileToCopyResponse.ProtoReflect.Descriptor instead.
-func (*FileToCopyResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use CopyFileResponse.ProtoReflect.Descriptor instead.
+func (*CopyFileResponse) Descriptor() ([]byte, []int) {
 	return file_replicate_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *FileToCopyResponse) GetAck() string {
+func (x *CopyFileResponse) GetAck() string {
 	if x != nil {
 		return x.Ack
 	}
@@ -209,19 +241,23 @@ var File_replicate_proto protoreflect.FileDescriptor
 
 const file_replicate_proto_rawDesc = "" +
 	"\n" +
-	"\x0freplicate.proto\x12\treplicate\"I\n" +
+	"\x0freplicate.proto\x12\tReplicate\"\xa0\x01\n" +
 	"\x17CopyNotificationRequest\x12\x15\n" +
-	"\x06is_src\x18\x01 \x01(\bR\x05isSrc\x12\x17\n" +
-	"\afile_id\x18\x02 \x01(\tR\x06fileId\",\n" +
+	"\x06is_src\x18\x01 \x01(\bR\x05isSrc\x12\x1b\n" +
+	"\tfile_name\x18\x02 \x01(\tR\bfileName\x12\x1b\n" +
+	"\tfile_path\x18\x03 \x01(\tR\bfilePath\x12\x17\n" +
+	"\adest_ip\x18\x04 \x01(\tR\x06destIp\x12\x1b\n" +
+	"\tdest_port\x18\x05 \x01(\tR\bdestPort\",\n" +
 	"\x18CopyNotificationResponse\x12\x10\n" +
-	"\x03ack\x18\x01 \x01(\tR\x03ack\"0\n" +
-	"\x11FileToCopyRequest\x12\x1b\n" +
-	"\tfile_data\x18\x01 \x01(\tR\bfileData\"&\n" +
-	"\x12FileToCopyResponse\x12\x10\n" +
-	"\x03ack\x18\x01 \x01(\tR\x03ack2\xab\x01\n" +
+	"\x03ack\x18\x01 \x01(\tR\x03ack\"K\n" +
+	"\x0fCopyFileRequest\x12\x1b\n" +
+	"\tfile_name\x18\x01 \x01(\tR\bfileName\x12\x1b\n" +
+	"\tfile_data\x18\x02 \x01(\fR\bfileData\"$\n" +
+	"\x10CopyFileResponse\x12\x10\n" +
+	"\x03ack\x18\x01 \x01(\tR\x03ack2\xa7\x01\n" +
 	"\x03DFS\x12[\n" +
-	"\x10CopyNotification\x12\".replicate.CopyNotificationRequest\x1a#.replicate.CopyNotificationResponse\x12G\n" +
-	"\bCopyFile\x12\x1c.replicate.FileToCopyRequest\x1a\x1d.replicate.FileToCopyResponseBBZ@github.com/RawanMostafa08/Distributed-File-System/grpc/Replicateb\x06proto3"
+	"\x10CopyNotification\x12\".Replicate.CopyNotificationRequest\x1a#.Replicate.CopyNotificationResponse\x12C\n" +
+	"\bCopyFile\x12\x1a.Replicate.CopyFileRequest\x1a\x1b.Replicate.CopyFileResponseB\x03Z\x01/b\x06proto3"
 
 var (
 	file_replicate_proto_rawDescOnce sync.Once
@@ -237,16 +273,16 @@ func file_replicate_proto_rawDescGZIP() []byte {
 
 var file_replicate_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_replicate_proto_goTypes = []any{
-	(*CopyNotificationRequest)(nil),  // 0: replicate.CopyNotificationRequest
-	(*CopyNotificationResponse)(nil), // 1: replicate.CopyNotificationResponse
-	(*FileToCopyRequest)(nil),        // 2: replicate.FileToCopyRequest
-	(*FileToCopyResponse)(nil),       // 3: replicate.FileToCopyResponse
+	(*CopyNotificationRequest)(nil),  // 0: Replicate.CopyNotificationRequest
+	(*CopyNotificationResponse)(nil), // 1: Replicate.CopyNotificationResponse
+	(*CopyFileRequest)(nil),          // 2: Replicate.CopyFileRequest
+	(*CopyFileResponse)(nil),         // 3: Replicate.CopyFileResponse
 }
 var file_replicate_proto_depIdxs = []int32{
-	0, // 0: replicate.DFS.CopyNotification:input_type -> replicate.CopyNotificationRequest
-	2, // 1: replicate.DFS.CopyFile:input_type -> replicate.FileToCopyRequest
-	1, // 2: replicate.DFS.CopyNotification:output_type -> replicate.CopyNotificationResponse
-	3, // 3: replicate.DFS.CopyFile:output_type -> replicate.FileToCopyResponse
+	0, // 0: Replicate.DFS.CopyNotification:input_type -> Replicate.CopyNotificationRequest
+	2, // 1: Replicate.DFS.CopyFile:input_type -> Replicate.CopyFileRequest
+	1, // 2: Replicate.DFS.CopyNotification:output_type -> Replicate.CopyNotificationResponse
+	3, // 3: Replicate.DFS.CopyFile:output_type -> Replicate.CopyFileResponse
 	2, // [2:4] is the sub-list for method output_type
 	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
