@@ -68,32 +68,12 @@ func ReadMP4File(filename string) ([]byte, error) {
 	}
 	return data, nil
 }
-// func pingMaster(node_index int32,masterAddress string) ( error) {
-// 	heartBeat := &pbHeartBeats.HeartbeatRequest{NodeId: "Node_" + fmt.Sprint(node_index)}
-// 	for {
-// 		print("Node_" + fmt.Sprint(node_index) + " is pinging master...")
-// 		conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
-// 		if err != nil {
-// 			fmt.Println("did not connect:", err)
-// 			return  err
-// 		}
-// 		master := pbHeartBeats.NewHeartbeatServiceClient(conn)
-// 		fmt.Println("Connected to Master",conn)
-// 		master.KeepAlive(context.Background(), heartBeat)
-// 		if err != nil {
-// 			log.Fatal("Error in pinging master:", err)
-// 			return err
-// 		}
-// 		time.Sleep(time.Second)
-// 	}
-// }
+
 func pingMaster(nodeIndex int32, masterAddress string) {
     for {
         conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
         if err != nil {
-            fmt.Printf("Failed to connect to master: %v. Retrying...\n", err)
-            time.Sleep(2 * time.Second)
-            continue
+            fmt.Printf("Failed to connect to master: %v \n", err)
         }
 
         master := pbHeartBeats.NewHeartbeatServiceClient(conn)
@@ -102,9 +82,7 @@ func pingMaster(nodeIndex int32, masterAddress string) {
                 NodeId: fmt.Sprintf("Node_%d", nodeIndex),
             })
             if err != nil {
-                fmt.Printf("Heartbeat failed: %v. Reconnecting...\n", err)
-                conn.Close()
-                break // Exit inner loop to reconnect
+                fmt.Printf("Heartbeat failed: \n", err)
             }
             time.Sleep(1 * time.Second)
         }
@@ -126,8 +104,6 @@ func main() {
 	nodes := []string{}
 
 	pbUtils.ReadFile(&masterAddress,&clientAddress,&nodes)
-	nodes[node_index] = "localhost:3000"
-	masterAddress="localhost:8080"
 	lis, err := net.Listen("tcp", nodes[node_index])
 	if err != nil {
 		fmt.Println("failed to listen:", err)

@@ -75,11 +75,9 @@ func getNodeByID(nodeID string) (DataNode, error) {
 }
 
 func (s *HeartBeatServer) KeepAlive(ctx context.Context, req *pbHeartBeats.HeartbeatRequest) (*pbHeartBeats.Empty, error) {
-    fmt.Printf("Received heartbeat from: %s\n", req.NodeId)
     for i := range dataNodes {
         if dataNodes[i].NodeID == req.NodeId {
             dataNodes[i].HeartBeat += 1
-            fmt.Printf("Node %s heartbeat count: %d\n", dataNodes[i].NodeID, dataNodes[i].HeartBeat)
         }
     }
     return &pbHeartBeats.Empty{}, nil
@@ -121,12 +119,12 @@ func monitorNodes() {
         for i := range dataNodes {
             if dataNodes[i].HeartBeat == 0 {
                 dataNodes[i].IsDataNodeAlive = false
-                fmt.Printf("Node %s is dead\n", dataNodes[i].NodeID)
+                fmt.Printf(" %s is dead\n", dataNodes[i].NodeID)
             } else {
                 dataNodes[i].IsDataNodeAlive = true
-                fmt.Printf("Node %s is alive (Heartbeats: %d)\n", dataNodes[i].NodeID, dataNodes[i].HeartBeat)
+                // fmt.Printf("Node %s is alive (Heartbeats: %d)\n", dataNodes[i].NodeID, dataNodes[i].HeartBeat)
             }
-            dataNodes[i].HeartBeat = 0 // Reset after checking
+            dataNodes[i].HeartBeat = 0 
         }
     }
 }
@@ -137,14 +135,11 @@ func main() {
 	var masterAddress, clientAddress string
 	nodes := []string{}
 	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
-	fmt.Printf("MASTER ADDRESS: '%s'\n", masterAddress)  // Should be ":8080"
-    fmt.Printf("NODES: %v\n", nodes)                  
+              
 	for i, node := range nodes {
 		dataNodes = append(dataNodes, DataNode{Port: node, NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: true, HeartBeat: 1})
-		// print("///////////",dataNodes[0].NodeID)
 	}
 	// check if nodes are alive and update the dataNodes list
-	masterAddress = ":8081"
 	lis, err := net.Listen("tcp", masterAddress)
 	if err != nil {
 		fmt.Println("failed to listen:", err)
