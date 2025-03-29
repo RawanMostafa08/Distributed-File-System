@@ -5,13 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sync"
+	"time"
+
 	// "strings"
 
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
 	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
+	
 	pbHeartBeats "github.com/RawanMostafa08/Distributed-File-System/grpc/HeartBeats"
 
-	
+
 	"google.golang.org/grpc"
 	// "google.golang.org/grpc/peer"
 )
@@ -21,6 +25,7 @@ type DataNode struct {
 	Port            string
 	NodeID          string
 	IsDataNodeAlive bool
+	HeartBeat int
 }
 
 type FileData struct {
@@ -37,7 +42,12 @@ type LookUpTableTuple struct {
 
 type textServer struct {
 	pb.UnimplementedDFSServer
+	pbHeartBeats.UnimplementedHeartbeatServiceServer
+	mu sync.Mutex
+
+
 }
+
 
 var lookupTuple LookUpTableTuple
 var dataNodes []DataNode
@@ -68,6 +78,22 @@ func getNodeByID(nodeID string) (DataNode, error) {
 	return DataNode{}, errors.New("Node not found")
 }
 
+func (s *textServer) KeepAlive(ctx context.Context, req *pbHeartBeats.HeartbeatRequest) (*pb.Empty, error) {
+	//Update the dataNodes list with id that is in the request in the lookup table
+	print("KeepAlive called")
+	for _, node := range dataNodes {
+		// if the node in dataNodes == req.nodeid get the node and make the  IsDataNodeAlive in it = true
+		if node.NodeID == req.NodeId {
+			fmt.Printf("Node" + node.NodeID + "is beating %d\n", node.HeartBeat)
+			node.HeartBeat+=1 
+		}
+	}
+
+	fmt.Printf("Received heartbeat from: %s\n", req.NodeId)
+	return &pb.Empty{}, nil
+}
+
+
 func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadPortsRequestBody) (*pb.DownloadPortsResponseBody, error) {
 	fmt.Println("DownloadPortsRequest called")
 	var nodes []string
@@ -96,6 +122,31 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 
 	return &pb.DownloadPortsResponseBody{Addresses: nodes, FileSize: file_size}, nil
 }
+// Monitor node statuses and update lookup table
+func monitorNodes() {
+	print("monitoring nodes...")
+	for {
+		time.Sleep( 10 *time.Second) // Check every 10 seconds
+		for i, node := range dataNodes {
+			fmt.Printf("Node %s has heartbeats: %d\n", dataNodes[i].NodeID, node.HeartBeat)
+			if node.HeartBeat == 0  {
+				dataNodes[i].IsDataNodeAlive = false
+				fmt.Printf("Node %s is Dead\n", dataNodes[i].NodeID)
+
+			} else {
+				fmt.Printf("Node %s is alive\n", dataNodes[i].NodeID)
+
+				dataNodes[i].IsDataNodeAlive = true
+			}
+			dataNodes[i].HeartBeat = 0
+		}
+
+	}
+
+}
+
+
+
 
 func main() {
 
@@ -105,7 +156,8 @@ func main() {
 	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
 
 	for i, node := range nodes {
-		dataNodes = append(dataNodes, DataNode{Port: node, NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: true})
+		dataNodes = append(dataNodes, DataNode{Port: node, NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: true ,HeartBeat: 1})
+		// print("///////////",dataNodes[0].NodeID)
 	}
 	// check if nodes are alive and update the dataNodes list
 
@@ -118,6 +170,7 @@ func main() {
 	s := grpc.NewServer()
 	pb.RegisterDFSServer(s, &textServer{})
 	fmt.Println("Server started. Listening on port 8080...")
+	go monitorNodes()
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
 	}
