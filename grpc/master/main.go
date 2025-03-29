@@ -51,14 +51,14 @@ var lookupTable = []models.FileData{
 		FileID:   "file_1",
 		Filename: "file1.mp4",
 		FilePath: "files/Node_1",
-		FileSize: 1024,
+		FileSize: 1055736,
 		NodeID:   "Node_1",
 	},
 	{
 		FileID:   "file_2",
 		Filename: "file2.mp4",
 		FilePath: "files/Node_2",
-		FileSize: 2048,
+		FileSize: 1055736,
 		NodeID:   "Node_2",
 	},
 }
@@ -75,33 +75,35 @@ func getNodeByID(nodeID string) (models.DataNode, error) {
 func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadPortsRequestBody) (*pb.DownloadPortsResponseBody, error) {
 	fmt.Println("DownloadPortsRequest called")
 	var nodes []string
+	var paths []string
 	var file_size int64
 	file_size = 0
 	fmt.Println(req.GetFileName())
 	// ##########################################################################
 	// Dummy Table Should be removed later , added id for each file
-	lookupTuple := LookUpTableTuple{
-		File: []models.FileData{
-			{FileID: "1", Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize: 1055736, NodeID: "Node_1"},
-			{FileID: "2", Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize: 1055736, NodeID: "Node_2"},
-		},
-	}
+	// lookupTuple := LookUpTableTuple{
+	// 	File: []models.FileData{
+	// 		{FileID: "1", Filename: "file1.mp4", FilePath: "files/file1.mp4", FileSize: 1055736, NodeID: "Node_1"},
+	// 		{FileID: "2", Filename: "file1.mp4", FilePath: "files/file1.mp4", FileSize: 1055736, NodeID: "Node_2"},
+	// 	},
+	// }
 	// ##########################################################################
 
-	for _, file := range lookupTuple.File {
+	for _, file := range lookupTable {
 		fmt.Println(file.Filename + " " + req.GetFileName())
 		if file.Filename == req.GetFileName() {
 			filenode, err := getNodeByID(file.NodeID)
 			if err != nil {
 				fmt.Println("Error getting node by ID:", err)
 			} else if filenode.IsDataNodeAlive == true {
+				paths = append(paths, file.FilePath)
 				nodes = append(nodes, filenode.Port)
 				file_size = file.FileSize
 			}
 		}
 	}
 
-	return &pb.DownloadPortsResponseBody{Addresses: nodes, FileSize: file_size}, nil
+	return &pb.DownloadPortsResponseBody{Addresses: nodes, Paths: paths, FileSize: file_size}, nil
 }
 
 // // Replicate Helper Functions
@@ -193,7 +195,7 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 func ReplicateFile() {
 	for {
 		fmt.Println(lookupTable)
-		time.Sleep(10 * time.Second)
+		time.Sleep(1 * time.Second)
 		fmt.Println("Replicating Files")
 		for _, file := range lookupTable {
 			// get all nodes that have this file

@@ -1,10 +1,11 @@
 syntax = "proto3";
 
-option go_package = "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload";
+option go_package = "/";
 
 package Upload;
 
 message Empty {}
+
 
 message UploadRequestBody {
     string client_IP = 1;
@@ -31,9 +32,11 @@ message MasterClientAckRequestBody {
 message DownloadPortsRequestBody{
     string file_name = 1;
 }
+
 message DownloadPortsResponseBody{
     repeated string addresses = 1;
-    int64 file_size = 2;
+    repeated string paths = 2;
+    int64 file_size = 3;
 }
 
 
@@ -43,8 +46,9 @@ message DownloadFileResponseBody{
 
 message DownloadFileRequestBody{
     string file_name = 1;
-    int64 start = 2;
-    int64 end = 3;
+    string file_path = 2;
+    int64 start = 3;
+    int64 end = 4;
     
 }
 

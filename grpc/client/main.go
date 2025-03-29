@@ -37,7 +37,7 @@ func requestDownloadPorts(masterAddress string , file_name string) (*pb.Download
 }
 
 
-func requestDownloadFile(nodeAddress, fileName string, start, end int64, wg *sync.WaitGroup, chunks map[int][]byte, index int, mu *sync.Mutex) {
+func requestDownloadFile(nodeAddress, fileName string,filePath string, start, end int64, wg *sync.WaitGroup, chunks map[int][]byte, index int, mu *sync.Mutex) {
 	defer wg.Done()
 	conn, err := grpc.Dial(nodeAddress, grpc.WithInsecure())
 	if err != nil {
@@ -47,7 +47,7 @@ func requestDownloadFile(nodeAddress, fileName string, start, end int64, wg *syn
 	defer conn.Close()
 
 	c := pb.NewDFSClient(conn)
-	resp, err := c.DownloadFileRequest(context.Background(), &pb.DownloadFileRequestBody{FileName: fileName, Start: start, End: end})
+	resp, err := c.DownloadFileRequest(context.Background(), &pb.DownloadFileRequestBody{FileName: fileName, FilePath: filePath,Start: start, End: end})
 
 	if err != nil {
 		fmt.Println("Error downloading chunk:", err)
@@ -60,7 +60,7 @@ func requestDownloadFile(nodeAddress, fileName string, start, end int64, wg *syn
 
 }
 
-func downloadFile(Addresses []string, file_name string, fileSize int64) {
+func downloadFile(Addresses []string,Paths []string ,file_name string, fileSize int64) {
 	chunkSize := int64(math.Ceil(float64(fileSize) / float64(len(Addresses))))
 	var wg sync.WaitGroup
 	chunks := make(map[int][]byte)
@@ -73,7 +73,7 @@ func downloadFile(Addresses []string, file_name string, fileSize int64) {
 			end = fileSize - 1
 		}
 		wg.Add(1)
-		go requestDownloadFile(node, file_name, start, end, &wg, chunks, i, &mu)
+		go requestDownloadFile(node, file_name,Paths[i], start, end, &wg, chunks, i, &mu)
 	}
 
 	wg.Wait()
@@ -122,5 +122,5 @@ func main() {
 	
 	fileSize := resp.FileSize
 
-	downloadFile(resp.Addresses, file_name, fileSize)
+	downloadFile(resp.Addresses,resp.Paths, file_name, fileSize)
 }

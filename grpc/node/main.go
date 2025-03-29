@@ -31,7 +31,7 @@ func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFi
 	fmt.Println("DownloadFileRequest called for:", req.FileName, "Range:", req.Start, "-", req.End)
 
 	// Open the file
-	filePath := "grpc\\files\\" + req.FileName
+	filePath := fmt.Sprintf("%s/%s" , req.FilePath,req.FileName)
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -71,7 +71,7 @@ func ReadMP4File(filename string) ([]byte, error) {
 }
 
 func (s *replicateServer) CopyFile(ctx context.Context, req *pb_r.CopyFileRequest) (*pb_r.CopyFileResponse, error) {
-	filePath := fmt.Sprintf("files/%s/%s", req.DestId, req.FileName)
+	filePath := fmt.Sprintf("files/%s/%s", req.DestId ,req.FileName)
 	err := os.WriteFile(filePath, req.FileData, 0644)
 	if err != nil {
 		fmt.Println("Error writing file:", err)
