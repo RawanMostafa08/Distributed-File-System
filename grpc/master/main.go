@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	// "sync"
 
@@ -29,12 +30,12 @@ type FileData struct {
 	NodeID   string
 }
 
-
 var dataNodes []DataNode
 var lookupTable []FileData
 
 type textServer struct {
 	pb.UnimplementedDFSServer
+	clientAddress string
 }
 
 func getNodeByID(nodeID string) (DataNode, error) {
@@ -49,32 +50,45 @@ func getNodeByID(nodeID string) (DataNode, error) {
 func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadRequestBody) (*pb.UploadResponseBody, error) {
 
 	return &pb.UploadResponseBody{
-		SelectedPort: dataNodes[0].Port,
 		DataNode_IP:  dataNodes[0].IP,
+		SelectedPort: dataNodes[0].Port,
 	}, nil
 }
 
-
-
 func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.NodeMasterAckRequestBodyUpload) (*pb.Empty, error) {
-    // Add the file to your lookup table
-    // Example implementation:
-    newFile := FileData{
-        Filename: req.FileName,
-        FilePath: req.FilePath,
+
+	newFile := FileData{
+		Filename: req.FileName,
+		FilePath: req.FilePath,
 		NodeID:   strconv.Itoa(int(req.NodeId)),
 	}
-    
+
 	lookupTable = append(lookupTable, newFile)
-    
-    fmt.Printf("Added file to lookup table: %s on node %s\n", req.FileName, req.DataNodeAddress)
-    return &pb.Empty{}, nil
+
+	fmt.Printf("Added file to lookup table: %s on node %s\n", req.FileName, req.DataNodeAddress)
+	conn, err := grpc.Dial(s.clientAddress, grpc.WithInsecure())
+    if err != nil {
+        fmt.Println("Failed to connect to client:", err)
+        return &pb.Empty{}, nil
+    }
+    defer conn.Close()
+    c := pb.NewDFSClient(conn)
+
+    _, err = c.MasterClientAckRequestUpload(context.Background(), &pb.MasterClientAckRequestBodyUpload{
+        Message: fmt.Sprintf("Upload of file %s was successful.", req.FileName),
+    })
+    if err != nil {
+        fmt.Println("Failed to send ack to client:", err)
+    }
+
+
+	return &pb.Empty{}, nil
 }
 
-//	func (s *textServer) MasterClientAckRequest(ctx context.Context, req *pb.MasterClientAckRequestBody) (*pb.Empty, error) {
-//		// Here you would handle the client acknowledgment
-//		return &pb.Empty{}, nil
-//	}
+func (s *textServer) MasterClientAckRequestUpload(ctx context.Context, req *pb.MasterClientAckRequestBodyUpload) (*pb.Empty, error) {
+	return &pb.Empty{}, nil
+}
+
 func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadPortsRequestBody) (*pb.DownloadPortsResponseBody, error) {
 	fmt.Println("DownloadPortsRequest called")
 	var nodes []string
@@ -83,9 +97,9 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 	fmt.Println(req.GetFileName())
 	// ##########################################################################
 	// Dummy Table Should be removed later , added id for each file
-	lookupTuple :=  []FileData{
-			{FileID: "1", Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize: 1055736, NodeID: "Node_1"},
-			{FileID: "2", Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize: 1055736, NodeID: "Node_2"},
+	lookupTuple := []FileData{
+		{FileID: "1", Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize: 1055736, NodeID: "Node_1"},
+		{FileID: "2", Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize: 1055736, NodeID: "Node_2"},
 	}
 	// ##########################################################################
 
@@ -109,12 +123,13 @@ func main() {
 
 	fmt.Println("master started...")
 	var masterAddress, clientAddress string
-	nodes := []pbUtils.Node{}
+	nodes := []string{}
 
 	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
 
 	for i, node := range nodes {
-		dataNodes = append(dataNodes, DataNode{IP:node.IP ,Port: node.Port, NodeID: fmt.Sprintf("Node_%d",i), IsDataNodeAlive: true})
+		parts := strings.Split(node, ":")
+		dataNodes = append(dataNodes, DataNode{IP: parts[0], Port: parts[1], NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: true})
 	}
 
 	lis, err := net.Listen("tcp", masterAddress)
@@ -124,7 +139,9 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterDFSServer(s, &textServer{})
+	pb.RegisterDFSServer(s, &textServer{
+		clientAddress: clientAddress,
+	})
 	fmt.Println("Server started. Listening on port 8080...")
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)

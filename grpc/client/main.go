@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"os"
 	"path/filepath"
 	"sync"
@@ -14,6 +15,29 @@ import (
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload" // Import the generated package
 	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
 )
+
+type textClientServer struct{
+	pb.UnimplementedDFSServer
+}
+
+func (s *textClientServer) MasterClientAckRequestUpload(ctx context.Context, req *pb.MasterClientAckRequestBodyUpload) (*pb.Empty, error) {
+	fmt.Println(req.Message)
+	return &pb.Empty{}, nil
+}
+func startClientServer(clientAddress string) {
+	lis, err := net.Listen("tcp", clientAddress)
+	if err != nil {
+		fmt.Println("Failed to listen:", err)
+		return
+	}
+	s := grpc.NewServer()
+	pb.RegisterDFSServer(s, &textClientServer{})
+	fmt.Printf("Client gRPC server listening at %s\n", clientAddress)
+	if err := s.Serve(lis); err != nil {
+		fmt.Println("Failed to serve:", err)
+	}
+}
+
 
 func requestUploadPort(masterAddress string) (*pb.UploadResponseBody, error) {
 	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
@@ -37,15 +61,15 @@ func uploadFile(nodeAddress, filePath string) error {
 	// Open the file
 	file, err := os.Open(filePath)
 	if err != nil {
-		return fmt.Errorf("error opening file %v",err)
+		return fmt.Errorf("error opening file %v", err)
 	}
 	defer file.Close()
-    fileName := filepath.Base(filePath)
+	fileName := filepath.Base(filePath)
 
 	// Read file content
 	fileData, err := io.ReadAll(file)
 	if err != nil {
-		return fmt.Errorf("error reading file %v",err)
+		return fmt.Errorf("error reading file %v", err)
 	}
 
 	// Connect to data node
@@ -60,7 +84,7 @@ func uploadFile(nodeAddress, filePath string) error {
 	_, err = c.UploadFileRequest(context.Background(), &pb.UploadFileRequestBody{
 		NodeAddress: nodeAddress,
 		FileData:    fileData,
-		FileName: fileName,
+		FileName:    fileName,
 	})
 	return err
 }
@@ -146,17 +170,19 @@ func downloadFile(Addresses []string, file_name string, fileSize int64) {
 }
 
 func main() {
-
 	// read parties addresses
 	var masterAddress, clientAddress string
-	nodes := []pbUtils.Node{}
+	nodes := []string{}
+
+	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
+	go startClientServer(clientAddress)
+
 	fmt.Println("Choose operation:")
 	fmt.Println("1. Upload file")
 	fmt.Println("2. Download file")
 	var choice int
 	fmt.Scanln(&choice)
 
-	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
 
 	switch choice {
 	case 1:

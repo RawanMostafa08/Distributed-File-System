@@ -30,6 +30,11 @@ message NodeMasterAckRequestBodyUpload {
     bool status = 5;
 }
 
+message MasterClientAckRequestBodyUpload {
+    bool status = 1;
+    string message =2;
+}
+
 // download methods
 message NodeMasterAckRequestBody {
     bool status = 1;
@@ -65,6 +70,7 @@ service DFS {
     rpc UploadPortsRequest(UploadRequestBody) returns (UploadResponseBody);
     rpc UploadFileRequest(UploadFileRequestBody) returns (Empty);
     rpc NodeMasterAckRequestUpload(NodeMasterAckRequestBodyUpload) returns (Empty);
+    rpc MasterClientAckRequestUpload(MasterClientAckRequestBodyUpload) returns (Empty);
     //download
     rpc NodeMasterAckRequest(NodeMasterAckRequestBody) returns (Empty);
     rpc MasterClientAckRequest(MasterClientAckRequestBody) returns (Empty);

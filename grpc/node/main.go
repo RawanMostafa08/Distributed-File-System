@@ -94,6 +94,7 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 
 	fmt.Printf("File %s saved successfully and master notified\n", req.FileName)
 	return &pb.Empty{}, nil
+
 }
 
 // ReadMP4File reads an MP4 file and returns its content as a byte slice.
@@ -113,11 +114,11 @@ func main() {
 	fmt.Scanln(&node_index)
 
 	var masterAddress, clientAddress string
-	nodes := []pbUtils.Node{}
+	nodes := []string{}
 
 	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%s",nodes[node_index].Port))
+	lis, err := net.Listen("tcp",nodes[node_index])
 	if err != nil {
 		fmt.Println("failed to listen:", err)
 		return
@@ -125,10 +126,10 @@ func main() {
 	s := grpc.NewServer()
 	pb.RegisterDFSServer(s, &textServer{
 		masterAddress: masterAddress,
-		nodeAddress: fmt.Sprintf("%s:%s",nodes[node_index].IP,nodes[node_index].Port),
+		nodeAddress: nodes[node_index],
 		nodeID: node_index,
-	})
-	fmt.Println("Server started. Listening on port ", nodes[node_index].Port, "...")
+		})
+	fmt.Println("Server started. Listening on ", nodes[node_index], "...")
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
 	}
