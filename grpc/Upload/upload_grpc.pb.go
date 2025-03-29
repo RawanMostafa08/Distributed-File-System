@@ -19,12 +19,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	DFS_UploadPortsRequest_FullMethodName     = "/Upload.DFS/UploadPortsRequest"
-	DFS_UploadFileRequest_FullMethodName      = "/Upload.DFS/UploadFileRequest"
-	DFS_NodeMasterAckRequest_FullMethodName   = "/Upload.DFS/NodeMasterAckRequest"
-	DFS_MasterClientAckRequest_FullMethodName = "/Upload.DFS/MasterClientAckRequest"
-	DFS_DownloadPortsRequest_FullMethodName   = "/Upload.DFS/DownloadPortsRequest"
-	DFS_DownloadFileRequest_FullMethodName    = "/Upload.DFS/DownloadFileRequest"
+	DFS_UploadPortsRequest_FullMethodName         = "/Upload.DFS/UploadPortsRequest"
+	DFS_UploadFileRequest_FullMethodName          = "/Upload.DFS/UploadFileRequest"
+	DFS_NodeMasterAckRequestUpload_FullMethodName = "/Upload.DFS/NodeMasterAckRequestUpload"
+	DFS_NodeMasterAckRequest_FullMethodName       = "/Upload.DFS/NodeMasterAckRequest"
+	DFS_MasterClientAckRequest_FullMethodName     = "/Upload.DFS/MasterClientAckRequest"
+	DFS_DownloadPortsRequest_FullMethodName       = "/Upload.DFS/DownloadPortsRequest"
+	DFS_DownloadFileRequest_FullMethodName        = "/Upload.DFS/DownloadFileRequest"
 )
 
 // DFSClient is the client API for DFS service.
@@ -34,6 +35,7 @@ type DFSClient interface {
 	// upload
 	UploadPortsRequest(ctx context.Context, in *UploadRequestBody, opts ...grpc.CallOption) (*UploadResponseBody, error)
 	UploadFileRequest(ctx context.Context, in *UploadFileRequestBody, opts ...grpc.CallOption) (*Empty, error)
+	NodeMasterAckRequestUpload(ctx context.Context, in *NodeMasterAckRequestBodyUpload, opts ...grpc.CallOption) (*Empty, error)
 	// download
 	NodeMasterAckRequest(ctx context.Context, in *NodeMasterAckRequestBody, opts ...grpc.CallOption) (*Empty, error)
 	MasterClientAckRequest(ctx context.Context, in *MasterClientAckRequestBody, opts ...grpc.CallOption) (*Empty, error)
@@ -63,6 +65,16 @@ func (c *dFSClient) UploadFileRequest(ctx context.Context, in *UploadFileRequest
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(Empty)
 	err := c.cc.Invoke(ctx, DFS_UploadFileRequest_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dFSClient) NodeMasterAckRequestUpload(ctx context.Context, in *NodeMasterAckRequestBodyUpload, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, DFS_NodeMasterAckRequestUpload_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +128,7 @@ type DFSServer interface {
 	// upload
 	UploadPortsRequest(context.Context, *UploadRequestBody) (*UploadResponseBody, error)
 	UploadFileRequest(context.Context, *UploadFileRequestBody) (*Empty, error)
+	NodeMasterAckRequestUpload(context.Context, *NodeMasterAckRequestBodyUpload) (*Empty, error)
 	// download
 	NodeMasterAckRequest(context.Context, *NodeMasterAckRequestBody) (*Empty, error)
 	MasterClientAckRequest(context.Context, *MasterClientAckRequestBody) (*Empty, error)
@@ -136,6 +149,9 @@ func (UnimplementedDFSServer) UploadPortsRequest(context.Context, *UploadRequest
 }
 func (UnimplementedDFSServer) UploadFileRequest(context.Context, *UploadFileRequestBody) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UploadFileRequest not implemented")
+}
+func (UnimplementedDFSServer) NodeMasterAckRequestUpload(context.Context, *NodeMasterAckRequestBodyUpload) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NodeMasterAckRequestUpload not implemented")
 }
 func (UnimplementedDFSServer) NodeMasterAckRequest(context.Context, *NodeMasterAckRequestBody) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NodeMasterAckRequest not implemented")
@@ -202,6 +218,24 @@ func _DFS_UploadFileRequest_Handler(srv interface{}, ctx context.Context, dec fu
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DFSServer).UploadFileRequest(ctx, req.(*UploadFileRequestBody))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DFS_NodeMasterAckRequestUpload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NodeMasterAckRequestBodyUpload)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DFSServer).NodeMasterAckRequestUpload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DFS_NodeMasterAckRequestUpload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DFSServer).NodeMasterAckRequestUpload(ctx, req.(*NodeMasterAckRequestBodyUpload))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -292,6 +326,10 @@ var DFS_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UploadFileRequest",
 			Handler:    _DFS_UploadFileRequest_Handler,
+		},
+		{
+			MethodName: "NodeMasterAckRequestUpload",
+			Handler:    _DFS_NodeMasterAckRequestUpload_Handler,
 		},
 		{
 			MethodName: "NodeMasterAckRequest",

@@ -20,6 +20,8 @@ import (
 type textServer struct {
 	pb.UnimplementedDFSServer
 	masterAddress string
+	nodeAddress string
+	nodeID int32
 }
 
 func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFileRequestBody) (*pb.DownloadFileResponseBody, error) {
@@ -78,7 +80,11 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 	defer conn.Close()
 
 	masterClient := pb.NewDFSClient(conn)
-	_, err = masterClient.NodeMasterAckRequest(ctx, &pb.NodeMasterAckRequestBody{
+	_, err = masterClient.NodeMasterAckRequestUpload(ctx, &pb.NodeMasterAckRequestBodyUpload{
+		FileName: req.FileName,
+		FilePath: filePath,
+		DataNodeAddress: s.nodeAddress,
+		NodeId: s.nodeID,
 		Status: true,
 	})
 
@@ -119,6 +125,8 @@ func main() {
 	s := grpc.NewServer()
 	pb.RegisterDFSServer(s, &textServer{
 		masterAddress: masterAddress,
+		nodeAddress: fmt.Sprintf("%s:%s",nodes[node_index].IP,nodes[node_index].Port),
+		nodeID: node_index,
 	})
 	fmt.Println("Server started. Listening on port ", nodes[node_index].Port, "...")
 	if err := s.Serve(lis); err != nil {

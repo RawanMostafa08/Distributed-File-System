@@ -22,6 +22,13 @@ message UploadFileRequestBody {
     string file_name = 3;
 }
 
+message NodeMasterAckRequestBodyUpload {
+    string file_name = 1;
+    string file_path = 2;
+    string data_node_address = 3;
+    int32 node_id = 4;
+    bool status = 5;
+}
 
 // download methods
 message NodeMasterAckRequestBody {
@@ -57,6 +64,7 @@ service DFS {
     //upload
     rpc UploadPortsRequest(UploadRequestBody) returns (UploadResponseBody);
     rpc UploadFileRequest(UploadFileRequestBody) returns (Empty);
+    rpc NodeMasterAckRequestUpload(NodeMasterAckRequestBodyUpload) returns (Empty);
     //download
     rpc NodeMasterAckRequest(NodeMasterAckRequestBody) returns (Empty);
     rpc MasterClientAckRequest(MasterClientAckRequestBody) returns (Empty);

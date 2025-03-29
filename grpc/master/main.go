@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 
 	// "sync"
 
@@ -55,10 +56,19 @@ func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadReque
 
 
 
-func (s *textServer) NodeMasterAckRequest(ctx context.Context, req *pb.NodeMasterAckRequestBody) (*pb.Empty, error) {
-	fmt.Println("ackkkkkk")
-
-	return &pb.Empty{}, nil
+func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.NodeMasterAckRequestBodyUpload) (*pb.Empty, error) {
+    // Add the file to your lookup table
+    // Example implementation:
+    newFile := FileData{
+        Filename: req.FileName,
+        FilePath: req.FilePath,
+		NodeID:   strconv.Itoa(int(req.NodeId)),
+	}
+    
+	lookupTable = append(lookupTable, newFile)
+    
+    fmt.Printf("Added file to lookup table: %s on node %s\n", req.FileName, req.DataNodeAddress)
+    return &pb.Empty{}, nil
 }
 
 //	func (s *textServer) MasterClientAckRequest(ctx context.Context, req *pb.MasterClientAckRequestBody) (*pb.Empty, error) {
