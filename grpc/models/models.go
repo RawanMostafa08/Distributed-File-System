@@ -5,6 +5,7 @@ type DataNode struct {
 	IP              string
 	Port            string
 	IsDataNodeAlive bool
+	HeartBeat       int
 }
 
 type FileData struct {

@@ -9,11 +9,14 @@ import (
 	"net"
 	"os"
 
+	"time"
 	// "strings"
 
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
 
 	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
+	pbHeartBeats "github.com/RawanMostafa08/Distributed-File-System/grpc/HeartBeats"
+
 	"google.golang.org/grpc"
 
 	pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
@@ -21,6 +24,10 @@ import (
 
 type textServer struct {
 	pb.UnimplementedDFSServer
+}
+
+type HeartBeatServer struct {
+	pbHeartBeats.UnimplementedHeartbeatServiceServer
 }
 
 type replicateServer struct {
@@ -69,6 +76,29 @@ func ReadMP4File(filename string) ([]byte, error) {
 	}
 	return data, nil
 }
+
+func pingMaster(nodeIndex int32, masterAddress string) {
+    for {
+        conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
+        if err != nil {
+            fmt.Printf("Failed to connect to master: %v \n", err)
+        }
+
+        master := pbHeartBeats.NewHeartbeatServiceClient(conn)
+        for {
+            _, err := master.KeepAlive(context.Background(), &pbHeartBeats.HeartbeatRequest{
+                NodeId: fmt.Sprintf("Node_%d", nodeIndex),
+            })
+            if err != nil {
+                fmt.Printf("Heartbeat failed: \n", err)
+            }
+            time.Sleep(1 * time.Second)
+        }
+    }
+}
+
+
+
 
 func (s *replicateServer) CopyFile(ctx context.Context, req *pb_r.CopyFileRequest) (*pb_r.CopyFileResponse, error) {
 	filePath := fmt.Sprintf("files/%s/%s", req.DestId ,req.FileName)
@@ -128,6 +158,7 @@ func main() {
 	pb.RegisterDFSServer(s, &textServer{})
 	pb_r.RegisterDFSServer(s, &replicateServer{})
 	fmt.Println("Server started. Listening on port ", nodes[node_index], "...")
+	go pingMaster(node_index,masterAddress)
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
 	}

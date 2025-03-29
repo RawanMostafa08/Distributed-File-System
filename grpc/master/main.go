@@ -12,6 +12,8 @@ import (
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
 	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
 
+	pbHeartBeats "github.com/RawanMostafa08/Distributed-File-System/grpc/HeartBeats"
+
 	"google.golang.org/grpc"
 	// "google.golang.org/grpc/peer"
 
@@ -20,20 +22,6 @@ import (
 	"github.com/RawanMostafa08/Distributed-File-System/grpc/models"
 )
 
-// type DataNode struct {
-// 	IP              string
-// 	Port            string
-// 	NodeID          string
-// 	IsDataNodeAlive bool
-// }
-
-// type FileData struct {
-// 	FileID   string
-// 	Filename string
-// 	FilePath string
-// 	FileSize int64
-// 	NodeID   string
-// }
 
 type LookUpTableTuple struct {
 	File []models.FileData
@@ -42,8 +30,11 @@ type LookUpTableTuple struct {
 type textServer struct {
 	pb.UnimplementedDFSServer
 }
+type HeartBeatServer struct {
+	pbHeartBeats.UnimplementedHeartbeatServiceServer
+}
 
-// var lookupTable [] FileData
+var lookupTuple LookUpTableTuple
 var dataNodes []models.DataNode
 
 var lookupTable = []models.FileData{
@@ -72,6 +63,15 @@ func getNodeByID(nodeID string) (models.DataNode, error) {
 	return models.DataNode{}, errors.New("Node not found")
 }
 
+func (s *HeartBeatServer) KeepAlive(ctx context.Context, req *pbHeartBeats.HeartbeatRequest) (*pbHeartBeats.Empty, error) {
+    for i := range dataNodes {
+        if dataNodes[i].NodeID == req.NodeId {
+            dataNodes[i].HeartBeat += 1
+        }
+    }
+    return &pbHeartBeats.Empty{}, nil
+}
+
 func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadPortsRequestBody) (*pb.DownloadPortsResponseBody, error) {
 	fmt.Println("DownloadPortsRequest called")
 	var nodes []string
@@ -80,14 +80,14 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 	file_size = 0
 	fmt.Println(req.GetFileName())
 	// ##########################################################################
-	// Dummy Table Should be removed later , added id for each file
+	// Dummy Table Should be removed later
 	// lookupTuple := LookUpTableTuple{
-	// 	File: []models.FileData{
-	// 		{FileID: "1", Filename: "file1.mp4", FilePath: "files/file1.mp4", FileSize: 1055736, NodeID: "Node_1"},
-	// 		{FileID: "2", Filename: "file1.mp4", FilePath: "files/file1.mp4", FileSize: 1055736, NodeID: "Node_2"},
+	// 	File: []FileData{
+	// 		{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4" , FileSize:1055736 , Node: DataNode{DataKeeperNode: ":3000", IsDataNodeAlive: true}},
+	// 		{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize:1055736 , Node: DataNode{DataKeeperNode: ":8090", IsDataNodeAlive: true}},
 	// 	},
 	// }
-	// ##########################################################################
+	// // ##########################################################################
 
 	for _, file := range lookupTable {
 		fmt.Println(file.Filename + " " + req.GetFileName())
@@ -106,86 +106,24 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 	return &pb.DownloadPortsResponseBody{Addresses: nodes, Paths: paths, FileSize: file_size}, nil
 }
 
-// // Replicate Helper Functions
-// func getFileNodes(fileID string) []string {
-// 	nodes := []string{}
-// 	for _, f := range lookupTable {
-// 		filenode, err := getNodeByID(f.NodeID)
-// 		if err != nil {
-// 			fmt.Println("Error getting node by ID:", err)
-// 		} else if f.FileID == fileID && filenode.IsDataNodeAlive == true {
-// 			nodes = append(nodes, filenode.NodeID)
-// 		}
-// 	}
-// 	return nodes
-// }
-
-// func getSrcFileInfo(file FileData, nodes []string) (FileData, error) {
-// 	for _, node := range nodes {
-// 		if node == file.NodeID {
-// 			file = FileData{
-// 				FileID:   file.FileID,
-// 				Filename: file.Filename,
-// 				FilePath: file.FilePath,
-// 				FileSize: file.FileSize,
-// 				NodeID:   file.NodeID,
-// 			}
-// 			return file, nil
-// 		}
-// 	}
-// 	return FileData{}, errors.New("Node not found")
-// }
-
-// func selectNodeToCopyTo(fileID string, fileNodes []string) (string, error) {
-// 	// alive node , not in the list of nodes that have the file
-// 	validNodes := []string{}
-// 	for _, node := range dataNodes {
-// 		flag := false
-// 		if node.IsDataNodeAlive == true {
-// 			for _, fileNode := range fileNodes {
-// 				if fileNode == node.NodeID {
-// 					flag = true
-// 					break
-// 				}
-// 			}
-// 			if flag == false {
-// 				validNodes = append(validNodes, node.NodeID)
-// 			}
-// 		}
-// 	}
-// 	if len(validNodes) == 0 {
-// 		return "", errors.New("No valid nodes to copy to")
-// 	} else {
-// 		return validNodes[0], nil
-// 	}
-
-// }
-
-// func copyFileToNode(srcFile FileData, destNodeID string) error {
-// 	srcNodeID := srcFile.NodeID
-// 	srcNode, err := getNodeByID(srcNodeID)
-// 	destNode, err := getNodeByID(destNodeID)
-// 	if err != nil {
-// 		return fmt.Errorf("Error getting node by ID: ", err)
-// 	}
-// 	conn, err := grpc.Dial(fmt.Sprintf("localhost%s", srcNode.Port), grpc.WithInsecure())
-// 	if err != nil {
-		
-// 		return fmt.Errorf("Error in dial: ", err)
-// 	}
+// Monitor node statuses and update lookup table
+func monitorNodes() {
+    for {
+        time.Sleep(10 * time.Second)
+        for i := range dataNodes {
+            if dataNodes[i].HeartBeat == 0 {
+                dataNodes[i].IsDataNodeAlive = false
+                fmt.Printf(" %s is dead\n", dataNodes[i].NodeID)
+            } else {
+                dataNodes[i].IsDataNodeAlive = true
+                // fmt.Printf("Node %s is alive (Heartbeats: %d)\n", dataNodes[i].NodeID, dataNodes[i].HeartBeat)
+            }
+            dataNodes[i].HeartBeat = 0 
+        }
+    }
 	
-// 	defer conn.Close()
-// 	c := pb_r.NewDFSClient(conn)
-// 	res, err := c.CopyNotification(context.Background(), &pb_r.CopyNotificationRequest{IsSrc: false, FileName: srcFile.Filename, FilePath: srcFile.FilePath, DestId: destNodeID, DestIp: destNode.IP, DestPort: destNode.Port})
-// 	if err != nil {
-// 		return fmt.Errorf("Error in CopyNotification: ", err)
-// 	}
-// 	fmt.Println("CopyNotification response:", res.Ack)
-// 	if res.Ack != "Ack" {
-// 		return fmt.Errorf(res.Ack)
-// 	}
-// 	return nil
-// }
+}
+
 
 // assume that each file record has fileid can be replicated in lookup table
 // fileid 1, file1, node1
@@ -253,7 +191,8 @@ func main() {
 
 	s := grpc.NewServer()
 	pb.RegisterDFSServer(s, &textServer{})
-
+	pbHeartBeats.RegisterHeartbeatServiceServer(s, &HeartBeatServer{})
+	go monitorNodes()
 	fmt.Println("Server started. Listening on port 8080...")
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
