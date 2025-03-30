@@ -75,12 +75,12 @@ func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFi
 
 func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRequestBody) (*pb.Empty, error) {
 
-	if err := os.MkdirAll("grpc/files", os.ModePerm); err != nil {
+	if err := os.MkdirAll("files", os.ModePerm); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %v", err)
 	}
 
 	// Save the file
-	filePath := filepath.Join("grpc", "files", req.FileName)
+	filePath := filepath.Join("files", req.FileName)
 	if err := os.WriteFile(filePath, req.FileData, 0644); err != nil {
 		return nil, fmt.Errorf("failed to save file: %v", err)
 	}
