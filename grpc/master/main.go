@@ -8,6 +8,10 @@ import (
 	"time"
 
 	// "strings"
+	"strconv"
+	"strings"
+
+	// "sync"
 
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
 	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
@@ -23,36 +27,18 @@ import (
 )
 
 
-type LookUpTableTuple struct {
-	File []models.FileData
-}
 
 type textServer struct {
 	pb.UnimplementedDFSServer
+	clientAddress string
 }
 type HeartBeatServer struct {
 	pbHeartBeats.UnimplementedHeartbeatServiceServer
 }
 
-var lookupTuple LookUpTableTuple
-var dataNodes []models.DataNode
 
-var lookupTable = []models.FileData{
-	{
-		FileID:   "file_1",
-		Filename: "file1.mp4",
-		FilePath: "files/Node_1",
-		FileSize: 1055736,
-		NodeID:   "Node_1",
-	},
-	{
-		FileID:   "file_2",
-		Filename: "file2.mp4",
-		FilePath: "files/Node_2",
-		FileSize: 1055736,
-		NodeID:   "Node_2",
-	},
-}
+var dataNodes []models.DataNode
+var lookupTable []models.FileData
 
 func getNodeByID(nodeID string) (models.DataNode, error) {
 	for _, node := range dataNodes {
@@ -60,16 +46,68 @@ func getNodeByID(nodeID string) (models.DataNode, error) {
 			return node, nil
 		}
 	}
-	return models.DataNode{}, errors.New("Node not found")
+	return models.DataNode{}, errors.New("node not found")
 }
 
-func (s *HeartBeatServer) KeepAlive(ctx context.Context, req *pbHeartBeats.HeartbeatRequest) (*pbHeartBeats.Empty, error) {
-    for i := range dataNodes {
-        if dataNodes[i].NodeID == req.NodeId {
-            dataNodes[i].HeartBeat += 1
-        }
+
+
+
+
+func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadRequestBody) (*pb.UploadResponseBody, error) {
+	fmt.Println("1.Master received upload request")
+	selectedNode := models.DataNode{IsDataNodeAlive: false}
+	for _,node := range(dataNodes){
+		if node.IsDataNodeAlive{
+			selectedNode = node
+			break
+		}
+	}
+
+	if !selectedNode.IsDataNodeAlive{
+		return &pb.UploadResponseBody{
+			DataNode_IP:  selectedNode.IP,
+			SelectedPort: selectedNode.Port,
+		}, fmt.Errorf("no alive data nodes found")
+	}
+
+	return &pb.UploadResponseBody{
+		DataNode_IP:  selectedNode.IP,
+		SelectedPort: selectedNode.Port,
+	}, nil
+}
+
+func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.NodeMasterAckRequestBodyUpload) (*pb.Empty, error) {
+
+	newFile := models.FileData{
+		Filename: req.FileName,
+		FilePath: req.FilePath,
+		NodeID:   strconv.Itoa(int(req.NodeId)),
+	}
+
+	lookupTable = append(lookupTable, newFile)
+
+	fmt.Printf("4,5. Master notified and added file to lookup table: %s on node %s\n", req.FileName, req.DataNodeAddress)
+	conn, err := grpc.Dial(s.clientAddress, grpc.WithInsecure())
+    if err != nil {
+        fmt.Println("Failed to connect to client:", err)
+        return &pb.Empty{}, nil
     }
-    return &pbHeartBeats.Empty{}, nil
+    defer conn.Close()
+    c := pb.NewDFSClient(conn)
+
+    _, err = c.MasterClientAckRequestUpload(context.Background(), &pb.MasterClientAckRequestBodyUpload{
+        Message: fmt.Sprintf("Upload of file %s was successful.", req.FileName),
+    })
+    if err != nil {
+        fmt.Println("Failed to send ack to client:", err)
+    }
+
+
+	return &pb.Empty{}, nil
+}
+
+func (s *textServer) MasterClientAckRequestUpload(ctx context.Context, req *pb.MasterClientAckRequestBodyUpload) (*pb.Empty, error) {
+	return &pb.Empty{}, nil
 }
 
 func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadPortsRequestBody) (*pb.DownloadPortsResponseBody, error) {
@@ -79,15 +117,7 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 	var file_size int64
 	file_size = 0
 	fmt.Println(req.GetFileName())
-	// ##########################################################################
-	// Dummy Table Should be removed later
-	// lookupTuple := LookUpTableTuple{
-	// 	File: []FileData{
-	// 		{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4" , FileSize:1055736 , Node: DataNode{DataKeeperNode: ":3000", IsDataNodeAlive: true}},
-	// 		{Filename: "file1.mp4", FilePath: "grpc\\files\\file1.mp4", FileSize:1055736 , Node: DataNode{DataKeeperNode: ":8090", IsDataNodeAlive: true}},
-	// 	},
-	// }
-	// // ##########################################################################
+	fmt.Println(req.GetFileName())
 
 	for _, file := range lookupTable {
 		fmt.Println(file.Filename + " " + req.GetFileName())
@@ -105,6 +135,16 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 
 	return &pb.DownloadPortsResponseBody{Addresses: nodes, Paths: paths, FileSize: file_size}, nil
 }
+
+func (s *HeartBeatServer) KeepAlive(ctx context.Context, req *pbHeartBeats.HeartbeatRequest) (*pbHeartBeats.Empty, error) {
+    for i := range dataNodes {
+        if dataNodes[i].NodeID == req.NodeId {
+            dataNodes[i].HeartBeat += 1
+        }
+    }
+    return &pbHeartBeats.Empty{}, nil
+}
+
 
 // Monitor node statuses and update lookup table
 func monitorNodes() {
@@ -172,15 +212,15 @@ func ReplicateFile() {
 
 func main() {
 
-	fmt.Println("master started...")
 	var masterAddress, clientAddress string
 	nodes := []string{}
+
 	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
 
 	for i, node := range nodes {
-		dataNodes = append(dataNodes, models.DataNode{IP:"localhost", Port: node, NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: false , HeartBeat: 0})
+		parts := strings.Split(node, ":")
+		dataNodes = append(dataNodes, models.DataNode{IP: parts[0], Port: parts[1], NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: false, HeartBeat: 0})
 	}
-	// check if nodes are alive and update the dataNodes list
 
 	lis, err := net.Listen("tcp", masterAddress)
 	if err != nil {
@@ -191,7 +231,9 @@ func main() {
 	go ReplicateFile()
 
 	s := grpc.NewServer()
-	pb.RegisterDFSServer(s, &textServer{})
+	pb.RegisterDFSServer(s, &textServer{
+		clientAddress: clientAddress,
+	})
 	pbHeartBeats.RegisterHeartbeatServiceServer(s, &HeartBeatServer{})
 	go monitorNodes()
 	fmt.Println("Server started. Listening on port 8080...")

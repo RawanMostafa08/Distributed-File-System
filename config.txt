@@ -1,6 +1,5 @@
-Master_Address = :8080
-Client_Address = :5000
-Node1_Address  = :3000
-Node2_Address  = :8090
-Node3_Address  = :8000
-
+Master_Address = 127.0.0.1:8080
+Client_Address = 127.0.0.1:5000
+Node1_Address  = 127.0.0.1:3000
+Node2_Address  = 127.0.0.1:8090
+Node3_Address  = 127.0.0.1:8000

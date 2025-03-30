@@ -7,8 +7,9 @@ package Upload;
 message Empty {}
 
 
+//upload methods
 message UploadRequestBody {
-    string client_IP = 1;
+    string master_address = 1;
 }
 
 message UploadResponseBody {
@@ -17,10 +18,25 @@ message UploadResponseBody {
 }
 
 message UploadFileRequestBody {
-    bytes file_data = 1;
-    string file_name = 2;
+    string node_address = 1;
+    bytes file_data = 2;
+    string file_name = 3;
 }
 
+message NodeMasterAckRequestBodyUpload {
+    string file_name = 1;
+    string file_path = 2;
+    string data_node_address = 3;
+    int32 node_id = 4;
+    bool status = 5;
+}
+
+message MasterClientAckRequestBodyUpload {
+    bool status = 1;
+    string message =2;
+}
+
+// download methods
 message NodeMasterAckRequestBody {
     bool status = 1;
 }
@@ -54,8 +70,12 @@ message DownloadFileRequestBody{
 
 
 service DFS {
-    rpc UploadRequest(UploadRequestBody) returns (UploadResponseBody);
+    //upload
+    rpc UploadPortsRequest(UploadRequestBody) returns (UploadResponseBody);
     rpc UploadFileRequest(UploadFileRequestBody) returns (Empty);
+    rpc NodeMasterAckRequestUpload(NodeMasterAckRequestBodyUpload) returns (Empty);
+    rpc MasterClientAckRequestUpload(MasterClientAckRequestBodyUpload) returns (Empty);
+    //download
     rpc NodeMasterAckRequest(NodeMasterAckRequestBody) returns (Empty);
     rpc MasterClientAckRequest(MasterClientAckRequestBody) returns (Empty);
     rpc DownloadPortsRequest(DownloadPortsRequestBody) returns (DownloadPortsResponseBody);
