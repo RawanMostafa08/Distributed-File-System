@@ -86,6 +86,7 @@ func uploadFile(nodeAddress, filePath string) error {
 		NodeAddress: nodeAddress,
 		FileData:    fileData,
 		FileName:    fileName,
+		FileSize: int64(len(fileData)),
 	})
 	return err
 }
@@ -219,6 +220,10 @@ func main() {
 		resp, err = requestDownloadPorts(masterAddress, file_name)
 		if err != nil {
 			fmt.Println("Error calling DownloadPortsRequest:", err)
+			return
+		}
+		if len(resp.Addresses) == 0{
+			fmt.Print("file not found on any node")
 			return
 		}
 		fmt.Println("Nodes Master:", resp.Addresses)

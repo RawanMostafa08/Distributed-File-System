@@ -75,6 +75,7 @@ func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.Nod
 		Filename: req.FileName,
 		FilePath: req.FilePath,
 		NodeID:   req.NodeId,
+		FileSize: req.FileSize,
 	}
 
 	lookupTable = append(lookupTable, newFile)
@@ -119,7 +120,7 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 				fmt.Println("Error getting node by ID:", err)
 			} else if filenode.IsDataNodeAlive {
 				paths = append(paths, file.FilePath)
-				nodes = append(nodes, filenode.Port)
+				nodes = append(nodes, fmt.Sprintf("%s:%s",filenode.IP,filenode.Port))
 				file_size = file.FileSize
 			}
 		}

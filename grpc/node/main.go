@@ -99,6 +99,7 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 		FilePath: filePath,
 		DataNodeAddress: s.nodeAddress,
 		NodeId: s.nodeID,
+		FileSize: req.FileSize,
 		Status: true,
 	})
 

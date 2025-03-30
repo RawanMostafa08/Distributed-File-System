@@ -9,7 +9,6 @@ type DataNode struct {
 }
 
 type FileData struct {
-	FileID   string
 	Filename string
 	FilePath string
 	FileSize int64

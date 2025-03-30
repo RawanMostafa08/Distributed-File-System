@@ -21,6 +21,7 @@ message UploadFileRequestBody {
     string node_address = 1;
     bytes file_data = 2;
     string file_name = 3;
+    int64 file_size = 4;
 }
 
 message NodeMasterAckRequestBodyUpload {
@@ -29,6 +30,7 @@ message NodeMasterAckRequestBodyUpload {
     string data_node_address = 3;
     string node_id = 4;
     bool status = 5;
+    int64 file_size = 6;
 }
 
 message MasterClientAckRequestBodyUpload {
