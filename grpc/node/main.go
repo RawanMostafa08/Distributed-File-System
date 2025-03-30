@@ -144,7 +144,7 @@ func pingMaster(nodeIndex int32, masterAddress string) {
 
 
 func (s *replicateServer) CopyFile(ctx context.Context, req *pb_r.CopyFileRequest) (*pb_r.CopyFileResponse, error) {
-	filePath := fmt.Sprintf("files/%s/%s", req.DestId ,req.FileName)
+	filePath:= filepath.Join("files",req.DestId ,req.FileName)
 	err := os.WriteFile(filePath, req.FileData, 0644)
 	if err != nil {
 		fmt.Println("Error writing file:", err)
@@ -155,7 +155,7 @@ func (s *replicateServer) CopyFile(ctx context.Context, req *pb_r.CopyFileReques
 }
 
 func (s *replicateServer) CopyNotification(ctx context.Context, req *pb_r.CopyNotificationRequest) (*pb_r.CopyNotificationResponse, error) {
-	filePath := fmt.Sprintf("%s/%s", req.FilePath, req.FileName)
+	filePath := filepath.Join(req.FilePath, req.FileName)
 	fileContent, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
