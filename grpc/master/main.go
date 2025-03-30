@@ -109,14 +109,14 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 // Monitor node statuses and update lookup table
 func monitorNodes() {
     for {
-        time.Sleep(10 * time.Second)
+        time.Sleep(5 * time.Second)
         for i := range dataNodes {
             if dataNodes[i].HeartBeat == 0 {
                 dataNodes[i].IsDataNodeAlive = false
                 fmt.Printf(" %s is dead\n", dataNodes[i].NodeID)
             } else {
                 dataNodes[i].IsDataNodeAlive = true
-                // fmt.Printf("Node %s is alive (Heartbeats: %d)\n", dataNodes[i].NodeID, dataNodes[i].HeartBeat)
+                fmt.Printf("Node %s is alive (Heartbeats: %d)\n", dataNodes[i].NodeID, dataNodes[i].HeartBeat)
             }
             dataNodes[i].HeartBeat = 0 
         }
@@ -133,7 +133,7 @@ func monitorNodes() {
 func ReplicateFile() {
 	for {
 		fmt.Println(lookupTable)
-		time.Sleep(1 * time.Second)
+		time.Sleep(10 * time.Second)
 		fmt.Println("Replicating Files")
 		for _, file := range lookupTable {
 			// get all nodes that have this file
@@ -146,6 +146,7 @@ func ReplicateFile() {
 					valid, err := pb_r_utils.SelectNodeToCopyTo(file.FileID,nodes, dataNodes)
 					if err != nil {
 						fmt.Println("Error selecting node to copy to:", err)
+						break
 					} else {
 						err = pb_r_utils.CopyFileToNode(srcFile, valid,dataNodes)
 						if err != nil {
@@ -177,7 +178,7 @@ func main() {
 	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
 
 	for i, node := range nodes {
-		dataNodes = append(dataNodes, models.DataNode{IP:"localhost", Port: node, NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: true})
+		dataNodes = append(dataNodes, models.DataNode{IP:"localhost", Port: node, NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: false , HeartBeat: 0})
 	}
 	// check if nodes are alive and update the dataNodes list
 
