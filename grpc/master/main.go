@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"path/filepath"
+	"sync"
 	"time"
 
 	// "strings"
@@ -36,6 +37,7 @@ type HeartBeatServer struct {
 
 var dataNodes []models.DataNode
 var lookupTable []models.FileData
+var lookupTableMutex sync.Mutex
 
 func getNodeByID(nodeID string) (models.DataNode, error) {
 	for _, node := range dataNodes {
@@ -179,6 +181,7 @@ func ReplicateFile() {
 							fmt.Println("Error copying file", err)
 						} else {
 							// update the lookup table
+							lookupTableMutex.Lock()
 							path := filepath.Join("files",valid)
 							file := models.FileData{
 								Filename: srcFile.Filename,
@@ -186,6 +189,7 @@ func ReplicateFile() {
 								FileSize: srcFile.FileSize,
 								NodeID:   valid}
 							lookupTable = append(lookupTable, file)
+							lookupTableMutex.Unlock()
 						}
 					}
 					nodes = pb_r_utils.GetFileNodes(file.Filename, lookupTable, dataNodes)
