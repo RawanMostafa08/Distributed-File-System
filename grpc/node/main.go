@@ -27,7 +27,7 @@ type textServer struct {
 	pb.UnimplementedDFSServer
 	masterAddress string
 	nodeAddress string
-	nodeID int32
+	nodeID string
 }
 
 type HeartBeatServer struct {
@@ -80,11 +80,11 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 	}
 
 	// Save the file
-	filePath := filepath.Join("files", req.FileName)
-	if err := os.WriteFile(filePath, req.FileData, 0644); err != nil {
+	filePath := filepath.Join("files",s.nodeID)
+	filePathU := filepath.Join("files",s.nodeID, req.FileName)
+	if err := os.WriteFile(filePathU, req.FileData, 0644); err != nil {
 		return nil, fmt.Errorf("failed to save file: %v", err)
 	}
-
 
 	// Notify master tracker
 	conn, err := grpc.Dial(s.masterAddress, grpc.WithInsecure())
@@ -133,14 +133,12 @@ func pingMaster(nodeIndex int32, masterAddress string) {
                 NodeId: fmt.Sprintf("Node_%d", nodeIndex),
             })
             if err != nil {
-                fmt.Printf("Heartbeat failed: \n", err)
+                fmt.Printf("Heartbeat failed: %v \n", err)
             }
             time.Sleep(1 * time.Second)
         }
     }
 }
-
-
 
 
 func (s *replicateServer) CopyFile(ctx context.Context, req *pb_r.CopyFileRequest) (*pb_r.CopyFileResponse, error) {
@@ -160,7 +158,7 @@ func (s *replicateServer) CopyNotification(ctx context.Context, req *pb_r.CopyNo
 	if err != nil {
 		return nil, err
 	}
-	conn, err := grpc.Dial(fmt.Sprintf("%s%s", req.DestIp, req.DestPort), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", req.DestIp, req.DestPort), grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return nil, err
@@ -176,7 +174,7 @@ func (s *replicateServer) CopyNotification(ctx context.Context, req *pb_r.CopyNo
 	if res.Ack == "ACK" {
 		return &pb_r.CopyNotificationResponse{Ack: "Ack"}, nil
 	}
-	return nil, errors.New("File not copied to destination node")
+	return nil, errors.New("file not copied to destination node")
 
 }
 
@@ -201,7 +199,7 @@ func main() {
 	pb.RegisterDFSServer(s, &textServer{
 		masterAddress: masterAddress,
 		nodeAddress: nodes[node_index],
-		nodeID: node_index,
+		nodeID: fmt.Sprintf("Node_%d",node_index),
 		})
 	pb_r.RegisterDFSServer(s, &replicateServer{})
 	fmt.Println("Server started. Listening on ",  nodes[node_index],  "...")

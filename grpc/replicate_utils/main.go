@@ -81,19 +81,19 @@ func CopyFileToNode(srcFile models.FileData, destNodeID string, dataNodes []mode
 	srcNode, err := GetNodeByID(srcNodeID,dataNodes)
 	destNode, err := GetNodeByID(destNodeID,dataNodes)
 	if err != nil {
-		return fmt.Errorf("Error getting node by ID: ", err)
+		return fmt.Errorf("error getting node by ID: ", err)
 	}
-	conn, err := grpc.Dial(fmt.Sprintf("localhost%s", srcNode.Port), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", srcNode.IP,srcNode.Port), grpc.WithInsecure())
 	if err != nil {
 		
-		return fmt.Errorf("Error in dial: ", err)
+		return fmt.Errorf("error in dial: %v", err)
 	}
 	
 	defer conn.Close()
 	c := pb_r.NewDFSClient(conn)
 	res, err := c.CopyNotification(context.Background(), &pb_r.CopyNotificationRequest{IsSrc: false, FileName: srcFile.Filename, FilePath: srcFile.FilePath, DestId: destNodeID, DestIp: destNode.IP, DestPort: destNode.Port})
 	if err != nil {
-		return fmt.Errorf("Error in CopyNotification: ", err)
+		return fmt.Errorf("error in CopyNotification: ", err)
 	}
 	fmt.Println("CopyNotification response:", res.Ack)
 	if res.Ack != "Ack" {

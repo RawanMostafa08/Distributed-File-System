@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"path/filepath"
 	"time"
 
 	// "strings"
-	"strconv"
 	"strings"
 
 	// "sync"
@@ -22,11 +22,9 @@ import (
 	// "google.golang.org/grpc/peer"
 
 	// pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
-	pb_r_utils "github.com/RawanMostafa08/Distributed-File-System/grpc/replicate_utils"
 	"github.com/RawanMostafa08/Distributed-File-System/grpc/models"
+	pb_r_utils "github.com/RawanMostafa08/Distributed-File-System/grpc/replicate_utils"
 )
-
-
 
 type textServer struct {
 	pb.UnimplementedDFSServer
@@ -35,7 +33,6 @@ type textServer struct {
 type HeartBeatServer struct {
 	pbHeartBeats.UnimplementedHeartbeatServiceServer
 }
-
 
 var dataNodes []models.DataNode
 var lookupTable []models.FileData
@@ -49,21 +46,17 @@ func getNodeByID(nodeID string) (models.DataNode, error) {
 	return models.DataNode{}, errors.New("node not found")
 }
 
-
-
-
-
 func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadRequestBody) (*pb.UploadResponseBody, error) {
 	fmt.Println("1.Master received upload request")
 	selectedNode := models.DataNode{IsDataNodeAlive: false}
-	for _,node := range(dataNodes){
-		if node.IsDataNodeAlive{
+	for _, node := range dataNodes {
+		if node.IsDataNodeAlive {
 			selectedNode = node
 			break
 		}
 	}
 
-	if !selectedNode.IsDataNodeAlive{
+	if !selectedNode.IsDataNodeAlive {
 		return &pb.UploadResponseBody{
 			DataNode_IP:  selectedNode.IP,
 			SelectedPort: selectedNode.Port,
@@ -81,27 +74,26 @@ func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.Nod
 	newFile := models.FileData{
 		Filename: req.FileName,
 		FilePath: req.FilePath,
-		NodeID:   strconv.Itoa(int(req.NodeId)),
+		NodeID:   req.NodeId,
 	}
 
 	lookupTable = append(lookupTable, newFile)
 
 	fmt.Printf("4,5. Master notified and added file to lookup table: %s on node %s\n", req.FileName, req.DataNodeAddress)
 	conn, err := grpc.Dial(s.clientAddress, grpc.WithInsecure())
-    if err != nil {
-        fmt.Println("Failed to connect to client:", err)
-        return &pb.Empty{}, nil
-    }
-    defer conn.Close()
-    c := pb.NewDFSClient(conn)
+	if err != nil {
+		fmt.Println("Failed to connect to client:", err)
+		return &pb.Empty{}, nil
+	}
+	defer conn.Close()
+	c := pb.NewDFSClient(conn)
 
-    _, err = c.MasterClientAckRequestUpload(context.Background(), &pb.MasterClientAckRequestBodyUpload{
-        Message: fmt.Sprintf("Upload of file %s was successful.", req.FileName),
-    })
-    if err != nil {
-        fmt.Println("Failed to send ack to client:", err)
-    }
-
+	_, err = c.MasterClientAckRequestUpload(context.Background(), &pb.MasterClientAckRequestBodyUpload{
+		Message: fmt.Sprintf("Upload of file %s was successful.", req.FileName),
+	})
+	if err != nil {
+		fmt.Println("Failed to send ack to client:", err)
+	}
 
 	return &pb.Empty{}, nil
 }
@@ -125,7 +117,7 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 			filenode, err := getNodeByID(file.NodeID)
 			if err != nil {
 				fmt.Println("Error getting node by ID:", err)
-			} else if filenode.IsDataNodeAlive == true {
+			} else if filenode.IsDataNodeAlive {
 				paths = append(paths, file.FilePath)
 				nodes = append(nodes, filenode.Port)
 				file_size = file.FileSize
@@ -137,34 +129,31 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 }
 
 func (s *HeartBeatServer) KeepAlive(ctx context.Context, req *pbHeartBeats.HeartbeatRequest) (*pbHeartBeats.Empty, error) {
-    for i := range dataNodes {
-        if dataNodes[i].NodeID == req.NodeId {
-            dataNodes[i].HeartBeat += 1
-        }
-    }
-    return &pbHeartBeats.Empty{}, nil
+	for i := range dataNodes {
+		if dataNodes[i].NodeID == req.NodeId {
+			dataNodes[i].HeartBeat += 1
+		}
+	}
+	return &pbHeartBeats.Empty{}, nil
 }
-
 
 // Monitor node statuses and update lookup table
 func monitorNodes() {
-    for {
-        time.Sleep(5 * time.Second)
-        for i := range dataNodes {
-            if dataNodes[i].HeartBeat == 0 {
-                dataNodes[i].IsDataNodeAlive = false
-                fmt.Printf(" %s is dead\n", dataNodes[i].NodeID)
-            } else {
-                dataNodes[i].IsDataNodeAlive = true
-                fmt.Printf("Node %s is alive (Heartbeats: %d)\n", dataNodes[i].NodeID, dataNodes[i].HeartBeat)
-            }
-            dataNodes[i].HeartBeat = 0 
-        }
-    }
-	
+	for {
+		time.Sleep(5 * time.Second)
+		for i := range dataNodes {
+			if dataNodes[i].HeartBeat == 0 {
+				dataNodes[i].IsDataNodeAlive = false
+				fmt.Printf(" %s is dead\n", dataNodes[i].NodeID)
+			} else {
+				dataNodes[i].IsDataNodeAlive = true
+				fmt.Printf("Node %s is alive (Heartbeats: %d)\n", dataNodes[i].NodeID, dataNodes[i].HeartBeat)
+			}
+			dataNodes[i].HeartBeat = 0
+		}
+	}
+
 }
-
-
 
 func ReplicateFile() {
 	for {
@@ -173,7 +162,7 @@ func ReplicateFile() {
 		fmt.Println("Replicating Files")
 		for _, file := range lookupTable {
 			// get all nodes that have this file
-			nodes := pb_r_utils.GetFileNodes(file.Filename,lookupTable, dataNodes)
+			nodes := pb_r_utils.GetFileNodes(file.Filename, lookupTable, dataNodes)
 			srcFile, err := pb_r_utils.GetSrcFileInfo(file, nodes)
 			if err != nil {
 				fmt.Println("Error getting source node ID:", err)
@@ -184,20 +173,21 @@ func ReplicateFile() {
 						fmt.Println("Error selecting node to copy to:", err)
 						break
 					} else {
-						err = pb_r_utils.CopyFileToNode(srcFile, valid,dataNodes)
+						err = pb_r_utils.CopyFileToNode(srcFile, valid, dataNodes)
 						if err != nil {
 							fmt.Println("Error copying file", err)
 						} else {
-						// update the lookup table
-						file := models.FileData{
-							Filename: srcFile.Filename,
-							FilePath: srcFile.FilePath,
-							FileSize: srcFile.FileSize,
-							NodeID:   valid}
-						lookupTable = append(lookupTable, file)
+							// update the lookup table
+							path := filepath.Join("files",valid)
+							file := models.FileData{
+								Filename: srcFile.Filename,
+								FilePath: path,
+								FileSize: srcFile.FileSize,
+								NodeID:   valid}
+							lookupTable = append(lookupTable, file)
 						}
 					}
-					nodes = pb_r_utils.GetFileNodes(file.Filename,lookupTable, dataNodes)
+					nodes = pb_r_utils.GetFileNodes(file.Filename, lookupTable, dataNodes)
 				}
 			}
 		}
