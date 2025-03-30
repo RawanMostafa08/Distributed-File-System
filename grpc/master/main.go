@@ -49,9 +49,24 @@ func getNodeByID(nodeID string) (DataNode, error) {
 
 func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadRequestBody) (*pb.UploadResponseBody, error) {
 	fmt.Println("1.Master received upload request")
+	selectedNode := DataNode{IsDataNodeAlive: false}
+	for _,node := range(dataNodes){
+		if node.IsDataNodeAlive{
+			selectedNode = node
+			break
+		}
+	}
+
+	if !selectedNode.IsDataNodeAlive{
+		return &pb.UploadResponseBody{
+			DataNode_IP:  selectedNode.IP,
+			SelectedPort: selectedNode.Port,
+		}, fmt.Errorf("no alive data nodes found")
+	}
+
 	return &pb.UploadResponseBody{
-		DataNode_IP:  dataNodes[0].IP,
-		SelectedPort: dataNodes[0].Port,
+		DataNode_IP:  selectedNode.IP,
+		SelectedPort: selectedNode.Port,
 	}, nil
 }
 
