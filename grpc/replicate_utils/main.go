@@ -23,13 +23,13 @@ func GetNodeByID(nodeID string, dataNodes []models.DataNode) (models.DataNode, e
 	return models.DataNode{}, errors.New("Node not found")
 }
 
-func GetFileNodes(fileID string, lookupTable []models.FileData, dataNodes []models.DataNode) []string {
+func GetFileNodes(fileName string, lookupTable []models.FileData, dataNodes []models.DataNode) []string {
 	nodes := []string{}
 	for _, f := range lookupTable {
 		filenode, err := GetNodeByID(f.NodeID,dataNodes)
 		if err != nil {
 			fmt.Println("Error getting node by ID:", err)
-		} else if f.FileID == fileID && filenode.IsDataNodeAlive == true {
+		} else if f.Filename == fileName && filenode.IsDataNodeAlive == true {
 			nodes = append(nodes, filenode.NodeID)
 		}
 	}
@@ -40,7 +40,6 @@ func GetSrcFileInfo(file models.FileData, nodes []string) (models.FileData, erro
 	for _, node := range nodes {
 		if node == file.NodeID {
 			file = models.FileData{
-				FileID:   file.FileID,
 				Filename: file.Filename,
 				FilePath: file.FilePath,
 				FileSize: file.FileSize,
@@ -52,7 +51,7 @@ func GetSrcFileInfo(file models.FileData, nodes []string) (models.FileData, erro
 	return models.FileData{}, errors.New("Node not found")
 }
 
-func SelectNodeToCopyTo(fileID string, fileNodes []string , dataNodes []models.DataNode) (string, error) {
+func SelectNodeToCopyTo( fileNodes []string , dataNodes []models.DataNode) (string, error) {
 	// alive node , not in the list of nodes that have the file
 	validNodes := []string{}
 	for _, node := range dataNodes {

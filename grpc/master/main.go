@@ -165,11 +165,7 @@ func monitorNodes() {
 }
 
 
-// assume that each file record has fileid can be replicated in lookup table
-// fileid 1, file1, node1
-// fileid 1, file1, node2
-// fileid 2, file1, node3
-// fileid 2, file1, node1
+
 func ReplicateFile() {
 	for {
 		fmt.Println(lookupTable)
@@ -177,13 +173,13 @@ func ReplicateFile() {
 		fmt.Println("Replicating Files")
 		for _, file := range lookupTable {
 			// get all nodes that have this file
-			nodes := pb_r_utils.GetFileNodes(file.FileID,lookupTable, dataNodes)
+			nodes := pb_r_utils.GetFileNodes(file.Filename,lookupTable, dataNodes)
 			srcFile, err := pb_r_utils.GetSrcFileInfo(file, nodes)
 			if err != nil {
 				fmt.Println("Error getting source node ID:", err)
 			} else {
 				for len(nodes) < 3 && len(nodes) > 0 {
-					valid, err := pb_r_utils.SelectNodeToCopyTo(file.FileID,nodes, dataNodes)
+					valid, err := pb_r_utils.SelectNodeToCopyTo(nodes, dataNodes)
 					if err != nil {
 						fmt.Println("Error selecting node to copy to:", err)
 						break
@@ -194,7 +190,6 @@ func ReplicateFile() {
 						} else {
 						// update the lookup table
 						file := models.FileData{
-							FileID:   srcFile.FileID,
 							Filename: srcFile.Filename,
 							FilePath: srcFile.FilePath,
 							FileSize: srcFile.FileSize,
@@ -202,7 +197,7 @@ func ReplicateFile() {
 						lookupTable = append(lookupTable, file)
 						}
 					}
-					nodes = pb_r_utils.GetFileNodes(file.FileID,lookupTable, dataNodes)
+					nodes = pb_r_utils.GetFileNodes(file.Filename,lookupTable, dataNodes)
 				}
 			}
 		}
