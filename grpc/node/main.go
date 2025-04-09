@@ -55,7 +55,8 @@ func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFi
 	fmt.Println("DownloadFileRequest called for:", req.FileName, "Range:", req.Start, "-", req.End)
 
 	// Open the file
-	filePath := fmt.Sprintf("%s/%s", req.FilePath, req.FileName)
+	// filePath := fmt.Sprintf("%s/%s", req.FilePath, req.FileName)
+	filePath := filepath.Join(req.FilePath, req.FileName)
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
