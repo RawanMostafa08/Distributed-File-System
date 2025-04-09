@@ -105,7 +105,10 @@ func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.Nod
 		}
 	}
 
-	conn, err := grpc.Dial(s.clientAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(s.clientAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
+		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
+		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+	))
 	if err != nil {
 		fmt.Println("Failed to connect to client:", err)
 		return &pb.Empty{}, nil
@@ -121,6 +124,28 @@ func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.Nod
 	}
 
 	return &pb.Empty{}, nil
+}
+
+
+func (s *textServer) NodeMasterAckRequestDownload(ctx context.Context, req *pb.NodeMasterAckRequestBodyDownload) (*pb.Empty, error) {
+	//change busy back to false
+	fmt.Printf("No44444444444444444444444444444444444deId %s\n", req.NodeID)
+	fmt.Printf("P444444444444444444444444444444ort %s\n", req.Port)
+
+	for i, node := range dataNodes {
+		if node.NodeID == req.NodeID {
+			for j, port := range node.Port {
+				if port == req.Port {
+					node.IsPortBusy[j] = false
+					dataNodes[i] = node
+					fmt.Printf("Ports freed after download")
+					break
+				}
+			}
+		}
+	}
+	return &pb.Empty{}, nil
+
 }
 
 func (s *textServer) MasterClientAckRequestUpload(ctx context.Context, req *pb.MasterClientAckRequestBodyUpload) (*pb.Empty, error) {
@@ -250,7 +275,11 @@ func main() {
 
 	go ReplicateFile()
 
-	s := grpc.NewServer()
+	s := grpc.NewServer(
+		grpc.MaxRecvMsgSize(1024*1024*200), // 200MB receive
+		grpc.MaxSendMsgSize(1024*1024*200), // 200MB send
+	
+	)
 	pb.RegisterDFSServer(s, &textServer{
 		clientAddress: clientAddress,
 	})

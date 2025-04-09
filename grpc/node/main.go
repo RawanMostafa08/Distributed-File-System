@@ -39,6 +39,28 @@ type replicateServer struct {
 	pb_r.UnimplementedDFSServer
 }
 
+func ackToMaster(ctx context.Context, masterAddress string, nodeID string, port string) {
+	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
+		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
+		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+	))
+	if err != nil {
+		return
+	}
+	defer conn.Close()
+
+	masterClient := pb.NewDFSClient(conn)
+	// fmt.Printf("[ACK] %s finished sending file. Notifying master at %s\n", nodeID, masterAddress)
+	_, err = masterClient.NodeMasterAckRequestDownload(ctx, &pb.NodeMasterAckRequestBodyDownload{
+		Status: true,
+		NodeID: nodeID,
+		Port:   port,
+	})
+	if err != nil {
+		return
+	}
+
+}
 
 func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFileRequestBody) (*pb.DownloadFileResponseBody, error) {
 	fmt.Println("DownloadFileRequest called for:", req.FileName, "Range:", req.Start, "-", req.End)
@@ -70,6 +92,7 @@ func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFi
 	// Trim the slice in case we read fewer bytes than requested
 	data = data[:n]
 
+	
 	// Return the chunk as a response
 	return &pb.DownloadFileResponseBody{FileData: data}, nil
 }
@@ -88,7 +111,10 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 	}
 
 	// Notify master tracker
-	conn, err := grpc.Dial(s.masterAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(s.masterAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
+		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
+		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+	))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to master: %v", err)
 	}
@@ -124,7 +150,10 @@ func ReadMP4File(filename string) ([]byte, error) {
 
 func pingMaster(nodeIndex int32, masterAddress string) {
 	for {
-		conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
+		conn, err := grpc.Dial(masterAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
+			grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+		))
 		if err != nil {
 			fmt.Printf("Failed to connect to master: %v \n", err)
 		}
@@ -159,7 +188,11 @@ func (s *replicateServer) CopyNotification(ctx context.Context, req *pb_r.CopyNo
 	if err != nil {
 		return nil, err
 	}
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", req.DestIp, req.DestPort), grpc.WithInsecure())
+	// conn, err := grpc.Dial(fmt.Sprintf("%s:%s", req.DestIp, req.DestPort), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", req.DestIp, req.DestPort), grpc.WithInsecure(), grpc.WithDefaultCallOptions(
+		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
+		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+	))
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return nil, err
@@ -203,7 +236,11 @@ func main() {
 				return
 			}
 
-			s := grpc.NewServer()
+			s := grpc.NewServer(
+				grpc.MaxRecvMsgSize(1024*1024*200), // 200MB receive
+				grpc.MaxSendMsgSize(1024*1024*200), // 200MB send
+			)
+
 			pb.RegisterDFSServer(s, &textServer{
 				masterAddress: masterAddress,
 				nodeAddress:   fmt.Sprintf("%s:%s", ip, p),
@@ -217,7 +254,6 @@ func main() {
 			}
 		}(port)
 	}
-
 
 	go pingMaster(node_index, masterAddress)
 	select {}

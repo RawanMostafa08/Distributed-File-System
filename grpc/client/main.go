@@ -30,7 +30,10 @@ func startClientServer(clientAddress string) {
 		fmt.Println("Failed to listen:", err)
 		return
 	}
-	s := grpc.NewServer()
+	s := grpc.NewServer(
+		grpc.MaxRecvMsgSize(1024*1024*200), // 200MB receive
+		grpc.MaxSendMsgSize(1024*1024*200), // 200MB send	
+	)
 	pb.RegisterDFSServer(s, &textClientServer{})
 	fmt.Printf("Client gRPC server listening at %s\n", clientAddress)
 	if err := s.Serve(lis); err != nil {
@@ -39,7 +42,10 @@ func startClientServer(clientAddress string) {
 }
 
 func requestUploadPort(masterAddress string) (*pb.UploadResponseBody, error) {
-	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
+		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
+		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+	))
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return nil, err
@@ -74,7 +80,11 @@ func uploadFile(nodeAddress, filePath string) error {
 	}
 
 	// Connect to data node
-	conn, err := grpc.Dial(nodeAddress, grpc.WithInsecure())
+	// conn, err := grpc.Dial(nodeAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(nodeAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
+		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
+		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+	))
 	if err != nil {
 		return err
 	}
@@ -92,7 +102,10 @@ func uploadFile(nodeAddress, filePath string) error {
 }
 
 func requestDownloadPorts(masterAddress string, file_name string) (*pb.DownloadPortsResponseBody, error) {
-	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
+		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
+		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+	))
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return nil, err
@@ -114,7 +127,11 @@ func requestDownloadPorts(masterAddress string, file_name string) (*pb.DownloadP
 
 func requestDownloadFile(nodeAddress, fileName string,filePath string, start, end int64, wg *sync.WaitGroup, chunks map[int][]byte, index int, mu *sync.Mutex) {
 	defer wg.Done()
-	conn, err := grpc.Dial(nodeAddress, grpc.WithInsecure())
+	// conn, err := grpc.Dial(nodeAddress, grpc.WithInsecure())
+	conn, err := grpc.Dial(nodeAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
+		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
+		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+	))
 	if err != nil {
 		fmt.Println("Failed to connect to node:", err)
 		return

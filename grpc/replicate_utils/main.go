@@ -112,7 +112,10 @@ func CopyFileToNode(srcFile models.FileData, destNodeID string, destNodePort str
 	if srcPort == "" {
 		return fmt.Errorf("no free port found on source node")
 	}
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", srcNode.IP, srcPort), grpc.WithInsecure())
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", srcNode.IP, srcPort), grpc.WithInsecure(), grpc.WithDefaultCallOptions(
+		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
+		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+	))
 	if err != nil {
 		return fmt.Errorf("error in dial: %v", err)
 	}

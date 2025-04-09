@@ -39,7 +39,6 @@ func ReadFile(masterAddress,clientAddress *string,nodes *[]string)(){
 			*nodes = append(*nodes, value)
 		case "Node3_Address":
 			*nodes = append(*nodes, value)
-		
 		}
 	}
 
