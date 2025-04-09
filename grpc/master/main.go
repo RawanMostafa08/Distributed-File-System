@@ -51,25 +51,35 @@ func getNodeByID(nodeID string) (models.DataNode, error) {
 func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadRequestBody) (*pb.UploadResponseBody, error) {
 	fmt.Println("1.Master received upload request")
 	selectedNode := models.DataNode{IsDataNodeAlive: false}
+	selectedPort := ""
 	for _, node := range dataNodes {
 		if node.IsDataNodeAlive {
-			selectedNode = node
-			break
+			for i, port := range node.Port {
+				if node.IsPortBusy[i] == false {
+					selectedNode = node
+					node.IsPortBusy[i] = true
+					selectedPort = port
+					break
+				}
+			}
+			if selectedPort != "" {
+				break
+			}
 		}
 	}
+		if !selectedNode.IsDataNodeAlive || selectedPort == "" {
+			return &pb.UploadResponseBody{
+				DataNode_IP:  "",
+				SelectedPort: selectedPort,
+			}, fmt.Errorf("no alive data nodes or no free port found")
+		}
 
-	if !selectedNode.IsDataNodeAlive {
 		return &pb.UploadResponseBody{
 			DataNode_IP:  selectedNode.IP,
-			SelectedPort: selectedNode.Port,
-		}, fmt.Errorf("no alive data nodes found")
+			SelectedPort: selectedPort,
+		}, nil
 	}
 
-	return &pb.UploadResponseBody{
-		DataNode_IP:  selectedNode.IP,
-		SelectedPort: selectedNode.Port,
-	}, nil
-}
 
 func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.NodeMasterAckRequestBodyUpload) (*pb.Empty, error) {
 
@@ -122,7 +132,7 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 				fmt.Println("Error getting node by ID:", err)
 			} else if filenode.IsDataNodeAlive {
 				paths = append(paths, file.FilePath)
-				nodes = append(nodes, fmt.Sprintf("%s:%s",filenode.IP,filenode.Port))
+				nodes = append(nodes, fmt.Sprintf("%s:%s", filenode.IP, filenode.Port))
 				file_size = file.FileSize
 			}
 		}
@@ -182,7 +192,7 @@ func ReplicateFile() {
 						} else {
 							// update the lookup table
 							lookupTableMutex.Lock()
-							path := filepath.Join("files",valid)
+							path := filepath.Join("files", valid)
 							file := models.FileData{
 								Filename: srcFile.Filename,
 								FilePath: path,
@@ -209,7 +219,9 @@ func main() {
 
 	for i, node := range nodes {
 		parts := strings.Split(node, ":")
-		dataNodes = append(dataNodes, models.DataNode{IP: parts[0], Port: parts[1], NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: false, HeartBeat: 0})
+		ip := parts[0]
+		ports := strings.Split(parts[1], ",")
+		dataNodes = append(dataNodes, models.DataNode{IP: ip, Port: ports, NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: false, HeartBeat: 0, IsPortBusy: make([]bool, len(ports))})
 	}
 
 	lis, err := net.Listen("tcp", masterAddress)
