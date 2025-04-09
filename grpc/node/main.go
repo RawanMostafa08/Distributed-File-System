@@ -49,17 +49,6 @@ func ackToMaster(ctx context.Context, masterAddress string, nodeID string, port 
 	}
 	defer conn.Close()
 
-	masterClient := pb.NewDFSClient(conn)
-	// fmt.Printf("[ACK] %s finished sending file. Notifying master at %s\n", nodeID, masterAddress)
-	_, err = masterClient.NodeMasterAckRequestDownload(ctx, &pb.NodeMasterAckRequestBodyDownload{
-		Status: true,
-		NodeID: nodeID,
-		Port:   port,
-	})
-	if err != nil {
-		return
-	}
-
 }
 
 func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFileRequestBody) (*pb.DownloadFileResponseBody, error) {
@@ -178,7 +167,7 @@ func (s *replicateServer) CopyFile(ctx context.Context, req *pb_r.CopyFileReques
 		fmt.Println("Error writing file:", err)
 		return nil, err
 	}
-	fmt.Println("File copied successfully to:", filePath)
+	fmt.Println("File copied successfully to:", req.DestId)
 	return &pb_r.CopyFileResponse{Ack: "ACK"}, nil
 }
 
@@ -206,6 +195,7 @@ func (s *replicateServer) CopyNotification(ctx context.Context, req *pb_r.CopyNo
 		return nil, err
 	}
 	if res.Ack == "ACK" {
+		fmt.Printf("Copy Notification sent to: %s \n",req.DestId)
 		return &pb_r.CopyNotificationResponse{Ack: "Ack"}, nil
 	}
 	return nil, errors.New("file not copied to destination node")

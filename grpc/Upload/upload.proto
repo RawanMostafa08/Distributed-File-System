@@ -70,16 +70,6 @@ message DownloadFileRequestBody{
     
 }
 
-message NodeMasterAckRequestBodyDownload {
-    bool status = 1;
-    string NodeID = 2;	
-	string Port = 3;   
-}
-
-
-message ClientNodeAckRequestBodyDownload {
-    bool status = 1;
-}
 
 service DFS {
     //upload
@@ -92,8 +82,5 @@ service DFS {
     rpc MasterClientAckRequest(MasterClientAckRequestBody) returns (Empty);
     rpc DownloadPortsRequest(DownloadPortsRequestBody) returns (DownloadPortsResponseBody);
     rpc DownloadFileRequest(DownloadFileRequestBody) returns (DownloadFileResponseBody);
-    rpc NodeMasterAckRequestDownload(NodeMasterAckRequestBodyDownload) returns (Empty);
-    rpc NodeMasterAckRequestDownload(NodeMasterAckRequestBodyDownload) returns (Empty);
-
 
 }

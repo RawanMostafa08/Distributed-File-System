@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 
 	pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
 	"github.com/RawanMostafa08/Distributed-File-System/grpc/models"
@@ -62,11 +63,8 @@ func SelectNodeToCopyTo(fileNodes []string, dataNodes []models.DataNode) (string
 				}
 			}
 			if !flag {
-				for i, port := range node.Port {
-					if !node.IsPortBusy[i] {
-						return node.NodeID, port, nil
-					}
-				}
+				randomIndex := rand.Intn(len(node.Port))
+				return node.NodeID,node.Port[randomIndex],nil
 			}
 		}
 	}
@@ -86,31 +84,8 @@ func CopyFileToNode(srcFile models.FileData, destNodeID string, destNodePort str
 	}
 	/////////////////////
 	srcPort := ""
-	for i, port := range srcNode.Port {
-		if !srcNode.IsPortBusy[i] {
-			srcPort = port
-		}
-	}
-	for _, node := range *dataNodes {
-		// src port busy
-		if node.NodeID == srcNodeID {
-			for j, port := range node.Port {
-				if port == srcPort {
-					// node.IsPortBusy[j] = true
-					node.IsPortBusy[j] = false
-				}
-			}
-			//dest port busy
-		} else if node.NodeID == destNodeID {
-			for j, port := range node.Port {
-				if port == destNodePort {
-					// node.IsPortBusy[j] = true
-					node.IsPortBusy[j] = false
-				}
-			}
-		}
-	}
-
+	randomIndex := rand.Intn(len(srcNode.Port))
+	srcPort = srcNode.Port[randomIndex]
 	if srcPort == "" {
 		return fmt.Errorf("no free port found on source node")
 	}
@@ -132,22 +107,6 @@ func CopyFileToNode(srcFile models.FileData, destNodeID string, destNodePort str
 	if res.Ack != "Ack" {
 		return fmt.Errorf("%s", res.Ack)
 	}
-	for _, node := range *dataNodes {
-		// src port free
-		if node.NodeID == srcNodeID {
-			for j, port := range node.Port {
-				if port == srcPort {
-					node.IsPortBusy[j] = false
-				}
-			}
-			//dest port free
-		} else if node.NodeID == destNodeID {
-			for j, port := range node.Port {
-				if port == destNodePort {
-					node.IsPortBusy[j] = false
-				}
-			}
-		}
-	}
+
 	return nil
 }

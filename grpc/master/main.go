@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 	"net"
 	"path/filepath"
 	"sync"
@@ -35,6 +36,11 @@ type HeartBeatServer struct {
 	pbHeartBeats.UnimplementedHeartbeatServiceServer
 }
 
+func init() {
+	// Seed the random number generator
+	rand.Seed(time.Now().UnixNano())
+}
+
 var dataNodes []models.DataNode
 var lookupTable []models.FileData
 var lookupTableMutex sync.Mutex
@@ -53,19 +59,11 @@ func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadReque
 	selectedNode := models.DataNode{IsDataNodeAlive: false}
 	selectedPort := ""
 	for _, node := range dataNodes {
-		if node.IsDataNodeAlive {
-			for i, port := range node.Port {
-				if !node.IsPortBusy[i] {
-					selectedNode = node
-					// node.IsPortBusy[i] = true
-					node.IsPortBusy[i] = false
-					selectedPort = port
-					break
-				}
-			}
-			if selectedPort != "" {
-				break
-			}
+		if node.IsDataNodeAlive && len(node.Port) > 0 {
+			selectedNode = node
+			randomIndex := rand.Intn(len(node.Port))
+			selectedPort = node.Port[randomIndex]
+			break
 		}
 	}
 	if !selectedNode.IsDataNodeAlive || selectedPort == "" {
@@ -93,18 +91,6 @@ func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.Nod
 	lookupTable = append(lookupTable, newFile)
 
 	fmt.Printf("4,5. Master notified and added file to lookup table: %s on node %s\n", req.FileName, req.DataNodeAddress)
-	//change busy back to false
-	for i, node := range dataNodes {
-		if node.NodeID == req.NodeId {
-			for j, port := range node.Port {
-				if port == strings.Split(req.DataNodeAddress, ":")[1] {
-					node.IsPortBusy[j] = false
-					dataNodes[i] = node
-					break
-				}
-			}
-		}
-	}
 
 	conn, err := grpc.Dial(s.clientAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
 		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
@@ -127,28 +113,6 @@ func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.Nod
 	return &pb.Empty{}, nil
 }
 
-
-func (s *textServer) NodeMasterAckRequestDownload(ctx context.Context, req *pb.NodeMasterAckRequestBodyDownload) (*pb.Empty, error) {
-	//change busy back to false
-	fmt.Printf("No44444444444444444444444444444444444deId %s\n", req.NodeID)
-	fmt.Printf("P444444444444444444444444444444ort %s\n", req.Port)
-
-	for i, node := range dataNodes {
-		if node.NodeID == req.NodeID {
-			for j, port := range node.Port {
-				if port == req.Port {
-					node.IsPortBusy[j] = false
-					dataNodes[i] = node
-					fmt.Printf("Ports freed after download")
-					break
-				}
-			}
-		}
-	}
-	return &pb.Empty{}, nil
-
-}
-
 func (s *textServer) MasterClientAckRequestUpload(ctx context.Context, req *pb.MasterClientAckRequestBodyUpload) (*pb.Empty, error) {
 	return &pb.Empty{}, nil
 }
@@ -168,20 +132,16 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 			filenode, err := getNodeByID(file.NodeID)
 			if err != nil {
 				fmt.Println("Error getting node by ID:", err)
-			} else if filenode.IsDataNodeAlive {
+
+			} else if filenode.IsDataNodeAlive && len(filenode.Port) > 0 {
 				paths = append(paths, file.FilePath)
-				for i, _ := range filenode.Port {
-					if !filenode.IsPortBusy[i] {
-						// filenode.IsPortBusy[i] = true
-						filenode.IsPortBusy[i] = false
-						nodes = append(nodes, fmt.Sprintf("%s:%s", filenode.IP, filenode.Port[i]))
-						break
-					}
-				}
+				randomIndex := rand.Intn(len(filenode.Port))
+				nodes = append(nodes, fmt.Sprintf("%s:%s", filenode.IP, filenode.Port[randomIndex]))
 				file_size = file.FileSize
 			}
 		}
 	}
+
 	return &pb.DownloadPortsResponseBody{Addresses: nodes, Paths: paths, FileSize: file_size}, nil
 }
 
@@ -193,7 +153,6 @@ func (s *HeartBeatServer) KeepAlive(ctx context.Context, req *pbHeartBeats.Heart
 	}
 	return &pbHeartBeats.Empty{}, nil
 }
-
 
 func ReplicateFile() {
 	for {
@@ -225,7 +184,7 @@ func ReplicateFile() {
 								FilePath: path,
 								FileSize: srcFile.FileSize,
 								NodeID:   valid}
-								lookupTable = append(lookupTable, file)
+							lookupTable = append(lookupTable, file)
 							lookupTableMutex.Unlock()
 
 						}
@@ -237,7 +196,6 @@ func ReplicateFile() {
 
 	}
 }
-
 
 func cleaningLookuptable(nodeID string) {
 	lookupTableMutex.Lock()
@@ -255,6 +213,7 @@ func cleaningLookuptable(nodeID string) {
 
 	lookupTable = newLookupTable
 }
+
 // Monitor node statuses and update lookup table
 func monitorNodes() {
 	for {
@@ -263,7 +222,7 @@ func monitorNodes() {
 			if dataNodes[i].HeartBeat == 0 {
 				dataNodes[i].IsDataNodeAlive = false
 				fmt.Printf(" %s is dead\n", dataNodes[i].NodeID)
-				cleaningLookuptable(dataNodes[i].NodeID);
+				cleaningLookuptable(dataNodes[i].NodeID)
 			} else {
 				dataNodes[i].IsDataNodeAlive = true
 				fmt.Printf("Node %s is alive (Heartbeats: %d)\n", dataNodes[i].NodeID, dataNodes[i].HeartBeat)
@@ -285,7 +244,7 @@ func main() {
 		parts := strings.Split(node, ":")
 		ip := parts[0]
 		ports := strings.Split(parts[1], ",")
-		dataNodes = append(dataNodes, models.DataNode{IP: ip, Port: ports, NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: false, HeartBeat: 0, IsPortBusy: make([]bool, len(ports))})
+		dataNodes = append(dataNodes, models.DataNode{IP: ip, Port: ports, NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: false, HeartBeat: 0})
 	}
 
 	lis, err := net.Listen("tcp", masterAddress)
@@ -299,7 +258,7 @@ func main() {
 	s := grpc.NewServer(
 		grpc.MaxRecvMsgSize(1024*1024*200), // 200MB receive
 		grpc.MaxSendMsgSize(1024*1024*200), // 200MB send
-	
+
 	)
 	pb.RegisterDFSServer(s, &textServer{
 		clientAddress: clientAddress,

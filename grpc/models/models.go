@@ -4,7 +4,6 @@ type DataNode struct {
 	NodeID          string
 	IP              string
 	Port            []string
-	IsPortBusy      []bool
 	IsDataNodeAlive bool
 	HeartBeat       int
 }
