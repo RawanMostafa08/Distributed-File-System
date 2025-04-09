@@ -1,16 +1,14 @@
-
 package Replicate_utils
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"google.golang.org/grpc"
+
 	pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
 	"github.com/RawanMostafa08/Distributed-File-System/grpc/models"
-
+	"google.golang.org/grpc"
 )
-
 
 // Replicate Helper Functions
 
@@ -20,16 +18,16 @@ func GetNodeByID(nodeID string, dataNodes []models.DataNode) (models.DataNode, e
 			return node, nil
 		}
 	}
-	return models.DataNode{}, errors.New("Node not found")
+	return models.DataNode{}, errors.New("node not found")
 }
 
 func GetFileNodes(fileName string, lookupTable []models.FileData, dataNodes []models.DataNode) []string {
 	nodes := []string{}
 	for _, f := range lookupTable {
-		filenode, err := GetNodeByID(f.NodeID,dataNodes)
+		filenode, err := GetNodeByID(f.NodeID, dataNodes)
 		if err != nil {
 			fmt.Println("Error getting node by ID:", err)
-		} else if f.Filename == fileName && filenode.IsDataNodeAlive == true {
+		} else if f.Filename == fileName && filenode.IsDataNodeAlive {
 			nodes = append(nodes, filenode.NodeID)
 		}
 	}
@@ -48,56 +46,103 @@ func GetSrcFileInfo(file models.FileData, nodes []string) (models.FileData, erro
 			return file, nil
 		}
 	}
-	return models.FileData{}, errors.New("Node not found")
+	return models.FileData{}, errors.New("node not found")
 }
 
-func SelectNodeToCopyTo( fileNodes []string , dataNodes []models.DataNode) (string, error) {
+func SelectNodeToCopyTo(fileNodes []string, dataNodes []models.DataNode) (string, string, error) {
 	// alive node , not in the list of nodes that have the file
-	validNodes := []string{}
+
 	for _, node := range dataNodes {
 		flag := false
-		if node.IsDataNodeAlive == true {
+		if node.IsDataNodeAlive {
 			for _, fileNode := range fileNodes {
 				if fileNode == node.NodeID {
 					flag = true
 					break
 				}
 			}
-			if flag == false {
-				validNodes = append(validNodes, node.NodeID)
+			if !flag {
+				for i, port := range node.Port {
+					if !node.IsPortBusy[i] {
+						return node.NodeID, port, nil
+					}
+				}
 			}
 		}
 	}
-	if len(validNodes) == 0 {
-		return "", errors.New("No valid nodes to copy to")
-	} else {
-		return validNodes[0], nil
-	}
+	return "", "", errors.New("no available nodes to copy to")
 
 }
 
-func CopyFileToNode(srcFile models.FileData, destNodeID string, dataNodes []models.DataNode) error {
+func CopyFileToNode(srcFile models.FileData, destNodeID string, destNodePort string, dataNodes *[]models.DataNode) error {
 	srcNodeID := srcFile.NodeID
-	srcNode, err := GetNodeByID(srcNodeID,dataNodes)
-	destNode, err := GetNodeByID(destNodeID,dataNodes)
+	srcNode, err := GetNodeByID(srcNodeID, *dataNodes)
 	if err != nil {
-		return fmt.Errorf("error getting node by ID: ", err)
+		return fmt.Errorf("error getting src node by id: %v", err)
 	}
-	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", srcNode.IP,srcNode.Port), grpc.WithInsecure())
+	destNode, err := GetNodeByID(destNodeID, *dataNodes)
 	if err != nil {
-		
+		return fmt.Errorf("error getting dest node by id: %v", err)
+	}
+	/////////////////////
+	srcPort := ""
+	for i, port := range srcNode.Port {
+		if !srcNode.IsPortBusy[i] {
+			srcPort = port
+		}
+	}
+	for _, node := range *dataNodes {
+		// src port busy
+		if node.NodeID == srcNodeID {
+			for j, port := range node.Port {
+				if port == srcPort {
+					node.IsPortBusy[j] = true
+				}
+			}
+			//dest port busy
+		} else if node.NodeID == destNodeID {
+			for j, port := range node.Port {
+				if port == destNodePort {
+					node.IsPortBusy[j] = true
+				}
+			}
+		}
+	}
+
+	if srcPort == "" {
+		return fmt.Errorf("no free port found on source node")
+	}
+	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", srcNode.IP, srcPort), grpc.WithInsecure())
+	if err != nil {
 		return fmt.Errorf("error in dial: %v", err)
 	}
-	
+
 	defer conn.Close()
 	c := pb_r.NewDFSClient(conn)
-	res, err := c.CopyNotification(context.Background(), &pb_r.CopyNotificationRequest{IsSrc: false, FileName: srcFile.Filename, FilePath: srcFile.FilePath, DestId: destNodeID, DestIp: destNode.IP, DestPort: destNode.Port})
+	res, err := c.CopyNotification(context.Background(), &pb_r.CopyNotificationRequest{IsSrc: false, FileName: srcFile.Filename, FilePath: srcFile.FilePath, DestId: destNodeID, DestIp: destNode.IP, DestPort: destNodePort})
 	if err != nil {
-		return fmt.Errorf("error in CopyNotification: ", err)
+		return fmt.Errorf("error in CopyNotification: %v", err)
 	}
 	fmt.Println("CopyNotification response:", res.Ack)
 	if res.Ack != "Ack" {
-		return fmt.Errorf(res.Ack)
+		return fmt.Errorf("%s", res.Ack)
+	}
+	for _, node := range *dataNodes {
+		// src port free
+		if node.NodeID == srcNodeID {
+			for j, port := range node.Port {
+				if port == srcPort {
+					node.IsPortBusy[j] = false
+				}
+			}
+			//dest port free
+		} else if node.NodeID == destNodeID {
+			for j, port := range node.Port {
+				if port == destNodePort {
+					node.IsPortBusy[j] = false
+				}
+			}
+		}
 	}
 	return nil
 }

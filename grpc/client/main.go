@@ -167,8 +167,6 @@ func downloadFile(Addresses []string,Paths []string ,file_name string, fileSize 
 		}
 	}
 
-	fmt.Println("File downloaded successfully!")
-
 }
 
 func main() {

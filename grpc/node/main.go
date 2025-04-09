@@ -7,16 +7,17 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 
-	"time"
 	"path/filepath"
+	"time"
 
 	// "strings"
 
 	pb "github.com/RawanMostafa08/Distributed-File-System/grpc/Upload"
 
-	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
 	pbHeartBeats "github.com/RawanMostafa08/Distributed-File-System/grpc/HeartBeats"
+	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
 
 	"google.golang.org/grpc"
 
@@ -26,8 +27,8 @@ import (
 type textServer struct {
 	pb.UnimplementedDFSServer
 	masterAddress string
-	nodeAddress string
-	nodeID string
+	nodeAddress   string
+	nodeID        string
 }
 
 type HeartBeatServer struct {
@@ -38,11 +39,12 @@ type replicateServer struct {
 	pb_r.UnimplementedDFSServer
 }
 
+
 func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFileRequestBody) (*pb.DownloadFileResponseBody, error) {
 	fmt.Println("DownloadFileRequest called for:", req.FileName, "Range:", req.Start, "-", req.End)
 
 	// Open the file
-	filePath := fmt.Sprintf("%s/%s" , req.FilePath,req.FileName)
+	filePath := fmt.Sprintf("%s/%s", req.FilePath, req.FileName)
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -72,7 +74,6 @@ func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFi
 	return &pb.DownloadFileResponseBody{FileData: data}, nil
 }
 
-
 func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRequestBody) (*pb.Empty, error) {
 
 	if err := os.MkdirAll("files", os.ModePerm); err != nil {
@@ -80,8 +81,8 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 	}
 
 	// Save the file
-	filePath := filepath.Join("files",s.nodeID)
-	filePathU := filepath.Join("files",s.nodeID, req.FileName)
+	filePath := filepath.Join("files", s.nodeID)
+	filePathU := filepath.Join("files", s.nodeID, req.FileName)
 	if err := os.WriteFile(filePathU, req.FileData, 0644); err != nil {
 		return nil, fmt.Errorf("failed to save file: %v", err)
 	}
@@ -95,12 +96,12 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 
 	masterClient := pb.NewDFSClient(conn)
 	_, err = masterClient.NodeMasterAckRequestUpload(ctx, &pb.NodeMasterAckRequestBodyUpload{
-		FileName: req.FileName,
-		FilePath: filePath,
+		FileName:        req.FileName,
+		FilePath:        filePath,
 		DataNodeAddress: s.nodeAddress,
-		NodeId: s.nodeID,
-		FileSize: req.FileSize,
-		Status: true,
+		NodeId:          s.nodeID,
+		FileSize:        req.FileSize,
+		Status:          true,
 	})
 
 	if err != nil {
@@ -122,28 +123,27 @@ func ReadMP4File(filename string) ([]byte, error) {
 }
 
 func pingMaster(nodeIndex int32, masterAddress string) {
-    for {
-        conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
-        if err != nil {
-            fmt.Printf("Failed to connect to master: %v \n", err)
-        }
+	for {
+		conn, err := grpc.Dial(masterAddress, grpc.WithInsecure())
+		if err != nil {
+			fmt.Printf("Failed to connect to master: %v \n", err)
+		}
 
-        master := pbHeartBeats.NewHeartbeatServiceClient(conn)
-        for {
-            _, err := master.KeepAlive(context.Background(), &pbHeartBeats.HeartbeatRequest{
-                NodeId: fmt.Sprintf("Node_%d", nodeIndex),
-            })
-            if err != nil {
-                fmt.Printf("Heartbeat failed: %v \n", err)
-            }
-            time.Sleep(1 * time.Second)
-        }
-    }
+		master := pbHeartBeats.NewHeartbeatServiceClient(conn)
+		for {
+			_, err := master.KeepAlive(context.Background(), &pbHeartBeats.HeartbeatRequest{
+				NodeId: fmt.Sprintf("Node_%d", nodeIndex),
+			})
+			if err != nil {
+				fmt.Printf("Heartbeat failed: %v \n", err)
+			}
+			time.Sleep(1 * time.Second)
+		}
+	}
 }
 
-
 func (s *replicateServer) CopyFile(ctx context.Context, req *pb_r.CopyFileRequest) (*pb_r.CopyFileResponse, error) {
-	filePath:= filepath.Join("files",req.DestId ,req.FileName)
+	filePath := filepath.Join("files", req.DestId, req.FileName)
 	err := os.WriteFile(filePath, req.FileData, 0644)
 	if err != nil {
 		fmt.Println("Error writing file:", err)
@@ -167,7 +167,7 @@ func (s *replicateServer) CopyNotification(ctx context.Context, req *pb_r.CopyNo
 	defer conn.Close()
 
 	c := pb_r.NewDFSClient(conn)
-	res, err := c.CopyFile(context.Background(), &pb_r.CopyFileRequest{FileName: req.FileName, FileData: fileContent, DestId: req.DestId })
+	res, err := c.CopyFile(context.Background(), &pb_r.CopyFileRequest{FileName: req.FileName, FileData: fileContent, DestId: req.DestId})
 	if err != nil {
 		fmt.Println("Error in CopyFile:", err)
 		return nil, err
@@ -190,22 +190,36 @@ func main() {
 	nodes := []string{}
 
 	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
+	parts := strings.Split(nodes[node_index], ":")
+	ip := parts[0]
+	node_ports := strings.Split(parts[1], ",")
 
-	lis, err := net.Listen("tcp",nodes[node_index])
-	if err != nil {
-		fmt.Println("failed to listen:", err)
-		return
+	for _, port := range node_ports {
+		go func(p string) {
+			address := fmt.Sprintf(":%s", strings.TrimSpace(p))
+			lis, err := net.Listen("tcp", address)
+			if err != nil {
+				fmt.Println("failed to listen on", address, ":", err)
+				return
+			}
+
+			s := grpc.NewServer()
+			pb.RegisterDFSServer(s, &textServer{
+				masterAddress: masterAddress,
+				nodeAddress:   fmt.Sprintf("%s:%s", ip, p),
+				nodeID:        fmt.Sprintf("Node_%d", node_index),
+			})
+			pb_r.RegisterDFSServer(s, &replicateServer{})
+
+			fmt.Println("Server started. Listening on", address, "...")
+			if err := s.Serve(lis); err != nil {
+				fmt.Println("failed to serve on", address, ":", err)
+			}
+		}(port)
 	}
-	s := grpc.NewServer()
-	pb.RegisterDFSServer(s, &textServer{
-		masterAddress: masterAddress,
-		nodeAddress: nodes[node_index],
-		nodeID: fmt.Sprintf("Node_%d",node_index),
-		})
-	pb_r.RegisterDFSServer(s, &replicateServer{})
-	fmt.Println("Server started. Listening on ",  nodes[node_index],  "...")
-	go pingMaster(node_index,masterAddress)
-	if err := s.Serve(lis); err != nil {
-		fmt.Println("failed to serve:", err)
-	}
+
+
+	go pingMaster(node_index, masterAddress)
+	select {}
+
 }

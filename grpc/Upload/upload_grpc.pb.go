@@ -27,6 +27,7 @@ const (
 	DFS_MasterClientAckRequest_FullMethodName       = "/Upload.DFS/MasterClientAckRequest"
 	DFS_DownloadPortsRequest_FullMethodName         = "/Upload.DFS/DownloadPortsRequest"
 	DFS_DownloadFileRequest_FullMethodName          = "/Upload.DFS/DownloadFileRequest"
+	DFS_NodeMasterAckRequestDownload_FullMethodName = "/Upload.DFS/NodeMasterAckRequestDownload"
 )
 
 // DFSClient is the client API for DFS service.
@@ -43,6 +44,7 @@ type DFSClient interface {
 	MasterClientAckRequest(ctx context.Context, in *MasterClientAckRequestBody, opts ...grpc.CallOption) (*Empty, error)
 	DownloadPortsRequest(ctx context.Context, in *DownloadPortsRequestBody, opts ...grpc.CallOption) (*DownloadPortsResponseBody, error)
 	DownloadFileRequest(ctx context.Context, in *DownloadFileRequestBody, opts ...grpc.CallOption) (*DownloadFileResponseBody, error)
+	NodeMasterAckRequestDownload(ctx context.Context, in *NodeMasterAckRequestBodyDownload, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type dFSClient struct {
@@ -133,6 +135,16 @@ func (c *dFSClient) DownloadFileRequest(ctx context.Context, in *DownloadFileReq
 	return out, nil
 }
 
+func (c *dFSClient) NodeMasterAckRequestDownload(ctx context.Context, in *NodeMasterAckRequestBodyDownload, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, DFS_NodeMasterAckRequestDownload_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DFSServer is the server API for DFS service.
 // All implementations must embed UnimplementedDFSServer
 // for forward compatibility.
@@ -147,6 +159,7 @@ type DFSServer interface {
 	MasterClientAckRequest(context.Context, *MasterClientAckRequestBody) (*Empty, error)
 	DownloadPortsRequest(context.Context, *DownloadPortsRequestBody) (*DownloadPortsResponseBody, error)
 	DownloadFileRequest(context.Context, *DownloadFileRequestBody) (*DownloadFileResponseBody, error)
+	NodeMasterAckRequestDownload(context.Context, *NodeMasterAckRequestBodyDownload) (*Empty, error)
 	mustEmbedUnimplementedDFSServer()
 }
 
@@ -180,6 +193,9 @@ func (UnimplementedDFSServer) DownloadPortsRequest(context.Context, *DownloadPor
 }
 func (UnimplementedDFSServer) DownloadFileRequest(context.Context, *DownloadFileRequestBody) (*DownloadFileResponseBody, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DownloadFileRequest not implemented")
+}
+func (UnimplementedDFSServer) NodeMasterAckRequestDownload(context.Context, *NodeMasterAckRequestBodyDownload) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NodeMasterAckRequestDownload not implemented")
 }
 func (UnimplementedDFSServer) mustEmbedUnimplementedDFSServer() {}
 func (UnimplementedDFSServer) testEmbeddedByValue()             {}
@@ -346,6 +362,24 @@ func _DFS_DownloadFileRequest_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DFS_NodeMasterAckRequestDownload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NodeMasterAckRequestBodyDownload)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DFSServer).NodeMasterAckRequestDownload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DFS_NodeMasterAckRequestDownload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DFSServer).NodeMasterAckRequestDownload(ctx, req.(*NodeMasterAckRequestBodyDownload))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DFS_ServiceDesc is the grpc.ServiceDesc for DFS service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -384,6 +418,10 @@ var DFS_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DownloadFileRequest",
 			Handler:    _DFS_DownloadFileRequest_Handler,
+		},
+		{
+			MethodName: "NodeMasterAckRequestDownload",
+			Handler:    _DFS_NodeMasterAckRequestDownload_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

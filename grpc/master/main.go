@@ -55,7 +55,7 @@ func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadReque
 	for _, node := range dataNodes {
 		if node.IsDataNodeAlive {
 			for i, port := range node.Port {
-				if node.IsPortBusy[i] == false {
+				if !node.IsPortBusy[i] {
 					selectedNode = node
 					node.IsPortBusy[i] = true
 					selectedPort = port
@@ -67,19 +67,18 @@ func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadReque
 			}
 		}
 	}
-		if !selectedNode.IsDataNodeAlive || selectedPort == "" {
-			return &pb.UploadResponseBody{
-				DataNode_IP:  "",
-				SelectedPort: selectedPort,
-			}, fmt.Errorf("no alive data nodes or no free port found")
-		}
-
+	if !selectedNode.IsDataNodeAlive || selectedPort == "" {
 		return &pb.UploadResponseBody{
-			DataNode_IP:  selectedNode.IP,
+			DataNode_IP:  "",
 			SelectedPort: selectedPort,
-		}, nil
+		}, fmt.Errorf("no alive data nodes or no free port found")
 	}
 
+	return &pb.UploadResponseBody{
+		DataNode_IP:  selectedNode.IP,
+		SelectedPort: selectedPort,
+	}, nil
+}
 
 func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.NodeMasterAckRequestBodyUpload) (*pb.Empty, error) {
 
@@ -93,6 +92,19 @@ func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.Nod
 	lookupTable = append(lookupTable, newFile)
 
 	fmt.Printf("4,5. Master notified and added file to lookup table: %s on node %s\n", req.FileName, req.DataNodeAddress)
+	//change busy back to false
+	for i, node := range dataNodes {
+		if node.NodeID == req.NodeId {
+			for j, port := range node.Port {
+				if port == strings.Split(req.DataNodeAddress, ":")[1] {
+					node.IsPortBusy[j] = false
+					dataNodes[i] = node
+					break
+				}
+			}
+		}
+	}
+
 	conn, err := grpc.Dial(s.clientAddress, grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("Failed to connect to client:", err)
@@ -132,12 +144,17 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 				fmt.Println("Error getting node by ID:", err)
 			} else if filenode.IsDataNodeAlive {
 				paths = append(paths, file.FilePath)
-				nodes = append(nodes, fmt.Sprintf("%s:%s", filenode.IP, filenode.Port))
+				for i, _ := range filenode.Port {
+					if !filenode.IsPortBusy[i] {
+						filenode.IsPortBusy[i] = true
+						nodes = append(nodes, fmt.Sprintf("%s:%s", filenode.IP, filenode.Port[i]))
+						break
+					}
+				}
 				file_size = file.FileSize
 			}
 		}
 	}
-
 	return &pb.DownloadPortsResponseBody{Addresses: nodes, Paths: paths, FileSize: file_size}, nil
 }
 
@@ -181,12 +198,12 @@ func ReplicateFile() {
 				fmt.Println("Error getting source node ID:", err)
 			} else {
 				for len(nodes) < 3 && len(nodes) > 0 {
-					valid, err := pb_r_utils.SelectNodeToCopyTo(nodes, dataNodes)
+					valid, validPort, err := pb_r_utils.SelectNodeToCopyTo(nodes, dataNodes)
 					if err != nil {
 						fmt.Println("Error selecting node to copy to:", err)
 						break
 					} else {
-						err = pb_r_utils.CopyFileToNode(srcFile, valid, dataNodes)
+						err = pb_r_utils.CopyFileToNode(srcFile, valid, validPort, &dataNodes)
 						if err != nil {
 							fmt.Println("Error copying file", err)
 						} else {
@@ -198,8 +215,9 @@ func ReplicateFile() {
 								FilePath: path,
 								FileSize: srcFile.FileSize,
 								NodeID:   valid}
-							lookupTable = append(lookupTable, file)
+								lookupTable = append(lookupTable, file)
 							lookupTableMutex.Unlock()
+
 						}
 					}
 					nodes = pb_r_utils.GetFileNodes(file.Filename, lookupTable, dataNodes)
