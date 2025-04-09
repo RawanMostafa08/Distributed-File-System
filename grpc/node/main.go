@@ -161,6 +161,9 @@ func pingMaster(nodeIndex int32, masterAddress string) {
 }
 
 func (s *replicateServer) CopyFile(ctx context.Context, req *pb_r.CopyFileRequest) (*pb_r.CopyFileResponse, error) {
+	if err := os.MkdirAll("files", os.ModePerm); err != nil {
+		return nil, fmt.Errorf("failed to create directory: %v", err)
+	}
 	filePath := filepath.Join("files", req.DestId, req.FileName)
 	err := os.WriteFile(filePath, req.FileData, 0644)
 	if err != nil {
