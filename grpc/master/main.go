@@ -194,23 +194,6 @@ func (s *HeartBeatServer) KeepAlive(ctx context.Context, req *pbHeartBeats.Heart
 	return &pbHeartBeats.Empty{}, nil
 }
 
-// Monitor node statuses and update lookup table
-func monitorNodes() {
-	for {
-		time.Sleep(5 * time.Second)
-		for i := range dataNodes {
-			if dataNodes[i].HeartBeat == 0 {
-				dataNodes[i].IsDataNodeAlive = false
-				fmt.Printf(" %s is dead\n", dataNodes[i].NodeID)
-			} else {
-				dataNodes[i].IsDataNodeAlive = true
-				fmt.Printf("Node %s is alive (Heartbeats: %d)\n", dataNodes[i].NodeID, dataNodes[i].HeartBeat)
-			}
-			dataNodes[i].HeartBeat = 0
-		}
-	}
-
-}
 
 func ReplicateFile() {
 	for {
@@ -253,6 +236,42 @@ func ReplicateFile() {
 		}
 
 	}
+}
+
+
+func cleaningLookuptable(nodeID string) {
+	lookupTableMutex.Lock()
+	defer lookupTableMutex.Unlock()
+
+	newLookupTable := []models.FileData{}
+
+	for _, file := range lookupTable {
+		if file.NodeID != nodeID {
+			newLookupTable = append(newLookupTable, file)
+		} else {
+			fmt.Printf("Removed file %s from lookup table (Node %s is dead)\n", file.Filename, nodeID)
+		}
+	}
+
+	lookupTable = newLookupTable
+}
+// Monitor node statuses and update lookup table
+func monitorNodes() {
+	for {
+		time.Sleep(5 * time.Second)
+		for i := range dataNodes {
+			if dataNodes[i].HeartBeat == 0 {
+				dataNodes[i].IsDataNodeAlive = false
+				fmt.Printf(" %s is dead\n", dataNodes[i].NodeID)
+				cleaningLookuptable(dataNodes[i].NodeID);
+			} else {
+				dataNodes[i].IsDataNodeAlive = true
+				fmt.Printf("Node %s is alive (Heartbeats: %d)\n", dataNodes[i].NodeID, dataNodes[i].HeartBeat)
+			}
+			dataNodes[i].HeartBeat = 0
+		}
+	}
+
 }
 
 func main() {
