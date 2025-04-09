@@ -57,7 +57,8 @@ func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadReque
 			for i, port := range node.Port {
 				if !node.IsPortBusy[i] {
 					selectedNode = node
-					node.IsPortBusy[i] = true
+					// node.IsPortBusy[i] = true
+					node.IsPortBusy[i] = false
 					selectedPort = port
 					break
 				}
@@ -171,7 +172,8 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 				paths = append(paths, file.FilePath)
 				for i, _ := range filenode.Port {
 					if !filenode.IsPortBusy[i] {
-						filenode.IsPortBusy[i] = true
+						// filenode.IsPortBusy[i] = true
+						filenode.IsPortBusy[i] = false
 						nodes = append(nodes, fmt.Sprintf("%s:%s", filenode.IP, filenode.Port[i]))
 						break
 					}

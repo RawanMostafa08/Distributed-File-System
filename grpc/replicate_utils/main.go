@@ -96,14 +96,16 @@ func CopyFileToNode(srcFile models.FileData, destNodeID string, destNodePort str
 		if node.NodeID == srcNodeID {
 			for j, port := range node.Port {
 				if port == srcPort {
-					node.IsPortBusy[j] = true
+					// node.IsPortBusy[j] = true
+					node.IsPortBusy[j] = false
 				}
 			}
 			//dest port busy
 		} else if node.NodeID == destNodeID {
 			for j, port := range node.Port {
 				if port == destNodePort {
-					node.IsPortBusy[j] = true
+					// node.IsPortBusy[j] = true
+					node.IsPortBusy[j] = false
 				}
 			}
 		}
