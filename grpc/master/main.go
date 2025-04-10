@@ -80,16 +80,16 @@ func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadReque
 }
 
 func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.NodeMasterAckRequestBodyUpload) (*pb.Empty, error) {
-
 	newFile := models.FileData{
 		Filename: req.FileName,
 		FilePath: req.FilePath,
 		NodeID:   req.NodeId,
 		FileSize: req.FileSize,
 	}
-
+	
+	lookupTableMutex.Lock()
 	lookupTable = append(lookupTable, newFile)
-
+	lookupTableMutex.Unlock()
 	fmt.Printf("4,5. Master notified and added file to lookup table: %s on node %s\n", req.FileName, req.DataNodeAddress)
 
 	conn, err := grpc.Dial(s.clientAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
@@ -125,7 +125,7 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 	file_size = 0
 	fmt.Println(req.GetFileName())
 	fmt.Println(req.GetFileName())
-
+	lookupTableMutex.Lock()
 	for _, file := range lookupTable {
 		fmt.Println(file.Filename + " " + req.GetFileName())
 		if file.Filename == req.GetFileName() {
@@ -141,6 +141,7 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 			}
 		}
 	}
+	lookupTableMutex.Unlock()
 
 	return &pb.DownloadPortsResponseBody{Addresses: nodes, Paths: paths, FileSize: file_size}, nil
 }
@@ -169,7 +170,7 @@ func ReplicateFile() {
 				for len(nodes) < 3 && len(nodes) > 0 {
 					valid, validPort, err := pb_r_utils.SelectNodeToCopyTo(nodes, dataNodes)
 					if err != nil {
-						fmt.Println("Error selecting node to copy to:", err)
+						fmt.Println(err)
 						break
 					} else {
 						err = pb_r_utils.CopyFileToNode(srcFile, valid, validPort, &dataNodes)
@@ -189,7 +190,9 @@ func ReplicateFile() {
 
 						}
 					}
+					lookupTableMutex.Lock()
 					nodes = pb_r_utils.GetFileNodes(file.Filename, lookupTable, dataNodes)
+					lookupTableMutex.Unlock()
 				}
 			}
 		}

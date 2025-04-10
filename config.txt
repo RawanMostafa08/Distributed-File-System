@@ -1,5 +1,5 @@
-Master_Address = 192.168.132.123:8080
-Client_Address = 192.168.132.244:5000
-Node1_Address  = 192.168.132.136:3000,3001,3002
-Node2_Address  = 192.168.132.250:8090,8091,8092
+Master_Address = 127.0.0.1:8080
+Client_Address = 127.0.0.1:5000
+Node1_Address  = 127.0.0.1:3000,3001,3002
+Node2_Address  = 127.0.0.1:8090,8091,8092
 Node3_Address  = 127.0.0.1:8000,8001,8002
