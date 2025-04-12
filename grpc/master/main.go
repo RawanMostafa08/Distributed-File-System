@@ -161,6 +161,7 @@ func ReplicateFile() {
 		fmt.Println(lookupTable)
 		time.Sleep(10 * time.Second)
 		fmt.Println("Replicating Files")
+		lookupTableMutex.Lock()
 		for _, file := range lookupTable {
 			// get all nodes that have this file
 			nodes := pb_r_utils.GetFileNodes(file.Filename, lookupTable, dataNodes)
@@ -179,7 +180,6 @@ func ReplicateFile() {
 							fmt.Println("Error copying file", err)
 						} else {
 							// update the lookup table
-							lookupTableMutex.Lock()
 							if err := os.MkdirAll("files", os.ModePerm); err != nil {
 								return
 							}
@@ -192,18 +192,16 @@ func ReplicateFile() {
 								FilePath: path,
 								FileSize: srcFile.FileSize,
 								NodeID:   valid}
+
 							lookupTable = append(lookupTable, file)
-							lookupTableMutex.Unlock()
 
 						}
 					}
-					lookupTableMutex.Lock()
 					nodes = pb_r_utils.GetFileNodes(file.Filename, lookupTable, dataNodes)
-					lookupTableMutex.Unlock()
 				}
 			}
 		}
-
+		lookupTableMutex.Unlock()
 	}
 }
 
