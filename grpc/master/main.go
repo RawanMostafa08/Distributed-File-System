@@ -39,8 +39,11 @@ type HeartBeatServer struct {
 var dataNodes []models.DataNode
 var lookupTable []models.FileData
 var lookupTableMutex sync.Mutex
+var dataNodesMutex sync.Mutex
 
 func getNodeByID(nodeID string) (models.DataNode, error) {
+	dataNodesMutex.Lock()
+	defer dataNodesMutex.Unlock()
 	for _, node := range dataNodes {
 		if node.NodeID == nodeID {
 			return node, nil
@@ -54,6 +57,7 @@ func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadReque
 	selectedNode := models.DataNode{IsDataNodeAlive: false}
 	selectedPort:= ""
 	err := error(nil)
+	dataNodesMutex.Lock()
 	for _, node := range dataNodes {
 		if node.IsDataNodeAlive && len(node.Port) > 0 {
 			selectedNode = node
@@ -64,6 +68,7 @@ func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadReque
 			break
 		}
 	}
+	dataNodesMutex.Unlock()
 	if !selectedNode.IsDataNodeAlive || selectedPort == "" {
 		return &pb.UploadResponseBody{
 			DataNode_IP:  "",
@@ -148,6 +153,8 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 }
 
 func (s *HeartBeatServer) KeepAlive(ctx context.Context, req *pbHeartBeats.HeartbeatRequest) (*pbHeartBeats.Empty, error) {
+	dataNodesMutex.Lock()
+	defer dataNodesMutex.Unlock()
 	for i := range dataNodes {
 		if dataNodes[i].NodeID == req.NodeId {
 			dataNodes[i].HeartBeat += 1
@@ -164,18 +171,24 @@ func ReplicateFile() {
 		lookupTableMutex.Lock()
 		for _, file := range lookupTable {
 			// get all nodes that have this file
+			dataNodesMutex.Lock()
 			nodes := pb_r_utils.GetFileNodes(file.Filename, lookupTable, dataNodes)
+			dataNodesMutex.Unlock()
 			srcFile, err := pb_r_utils.GetSrcFileInfo(file, nodes)
 			if err != nil {
 				fmt.Println("Error getting source node ID:", err)
 			} else {
 				for len(nodes) < 3 && len(nodes) > 0 {
+					dataNodesMutex.Lock()
 					valid, validPort, err := pb_r_utils.SelectNodeToCopyTo(nodes, dataNodes)
+					dataNodesMutex.Unlock()
 					if err != nil {
 						fmt.Println(err)
 						break
 					} else {
-						err = pb_r_utils.CopyFileToNode(srcFile, valid, validPort, &dataNodes)
+						dataNodesMutex.Lock()
+						err = pb_r_utils.CopyFileToNode(srcFile, valid, validPort, dataNodes)
+						dataNodesMutex.Unlock()
 						if err != nil {
 							fmt.Println("Error copying file", err)
 						} else {
@@ -197,7 +210,9 @@ func ReplicateFile() {
 
 						}
 					}
+					dataNodesMutex.Lock()
 					nodes = pb_r_utils.GetFileNodes(file.Filename, lookupTable, dataNodes)
+					dataNodesMutex.Unlock()
 				}
 			}
 		}
@@ -226,6 +241,7 @@ func cleaningLookuptable(nodeID string) {
 func monitorNodes() {
 	for {
 		time.Sleep(5 * time.Second)
+		dataNodesMutex.Lock()
 		for i := range dataNodes {
 			if dataNodes[i].HeartBeat == 0 {
 				dataNodes[i].IsDataNodeAlive = false
@@ -237,6 +253,7 @@ func monitorNodes() {
 			}
 			dataNodes[i].HeartBeat = 0
 		}
+		dataNodesMutex.Unlock()
 	}
 
 }
@@ -252,7 +269,9 @@ func main() {
 		parts := strings.Split(node, ":")
 		ip := parts[0]
 		ports := strings.Split(parts[1], ",")
+		dataNodesMutex.Lock()
 		dataNodes = append(dataNodes, models.DataNode{IP: ip, Port: ports, NodeID: fmt.Sprintf("Node_%d", i), IsDataNodeAlive: false, HeartBeat: 0})
+		dataNodesMutex.Unlock()
 	}
 
 	lis, err := net.Listen("tcp", masterAddress)

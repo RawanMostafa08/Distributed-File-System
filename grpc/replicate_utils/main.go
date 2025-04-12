@@ -90,13 +90,13 @@ func SelectNodeToCopyTo(fileNodes []string, dataNodes []models.DataNode) (string
 
 }
 
-func CopyFileToNode(srcFile models.FileData, destNodeID string, destNodePort string, dataNodes *[]models.DataNode) error {
+func CopyFileToNode(srcFile models.FileData, destNodeID string, destNodePort string, dataNodes []models.DataNode) error {
 	srcNodeID := srcFile.NodeID
-	srcNode, err := GetNodeByID(srcNodeID, *dataNodes)
+	srcNode, err := GetNodeByID(srcNodeID, dataNodes)
 	if err != nil {
 		return fmt.Errorf("error getting src node by id: %v", err)
 	}
-	destNode, err := GetNodeByID(destNodeID, *dataNodes)
+	destNode, err := GetNodeByID(destNodeID, dataNodes)
 	if err != nil {
 		return fmt.Errorf("error getting dest node by id: %v", err)
 	}
