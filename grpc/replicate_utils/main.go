@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
 	"github.com/RawanMostafa08/Distributed-File-System/grpc/models"
@@ -22,20 +23,32 @@ func GetNodeByID(nodeID string, dataNodes []models.DataNode) (models.DataNode, e
 }
 
 func GetAvailablePort(node models.DataNode) (string, error) {
-	selectedPort := ""
 	for _, port := range node.Port {
 		address := fmt.Sprintf("%s:%s", node.IP, port)
-		conn, err := grpc.Dial(address, grpc.WithInsecure())
 		fmt.Printf("trying to dial to address: %s\n", address)
+
+		// Use a timeout context to prevent hanging
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+
+		conn, err := grpc.DialContext(ctx, address,
+			grpc.WithInsecure(),
+			grpc.WithBlock()) // Makes Dial synchronous
+
 		if err != nil {
-			conn.Close()
+			// If there's an error, the port might be available (connection refused)
+			// or it might be truly unavailable (other errors)
+			if conn != nil {
+				conn.Close()
+			}
 			continue
 		}
-		selectedPort = port
+
+		// If we get here, the connection was successful
 		conn.Close()
-		return selectedPort, nil
+		return port, nil
 	}
-	return "",fmt.Errorf("no available ports for node %s", node.NodeID) 
+	return "", fmt.Errorf("no available ports for node %s", node.NodeID)
 }
 
 func GetFileNodes(fileName string, lookupTable []models.FileData, dataNodes []models.DataNode) []string {
@@ -82,7 +95,7 @@ func SelectNodeToCopyTo(fileNodes []string, dataNodes []models.DataNode) (string
 				if err != nil {
 					continue
 				}
-				return node.NodeID,port,nil
+				return node.NodeID, port, nil
 			}
 		}
 	}
@@ -100,14 +113,14 @@ func CopyFileToNode(srcFile models.FileData, destNodeID string, destNodePort str
 	if err != nil {
 		return fmt.Errorf("error getting dest node by id: %v", err)
 	}
-	
-	srcPort,err := GetAvailablePort(srcNode)
+
+	srcPort, err := GetAvailablePort(srcNode)
 	if err != nil {
 		return fmt.Errorf("no free port found on source node")
 	}
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", srcNode.IP, srcPort), grpc.WithInsecure(), grpc.WithDefaultCallOptions(
-		grpc.MaxCallRecvMsgSize(1024*1024*1024), 
-		grpc.MaxCallSendMsgSize(1024*1024*1024), 
+		grpc.MaxCallRecvMsgSize(1024*1024*1024),
+		grpc.MaxCallSendMsgSize(1024*1024*1024),
 	))
 	if err != nil {
 		return fmt.Errorf("error in dial: %v", err)
