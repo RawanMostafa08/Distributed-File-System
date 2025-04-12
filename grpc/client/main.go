@@ -41,7 +41,7 @@ func startClientServer(clientAddress string) {
 	}
 }
 
-func requestUploadPort(masterAddress string) (*pb.UploadResponseBody, error) {
+func requestUploadPort(masterAddress,clientAddress string) (*pb.UploadResponseBody, error) {
 	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
 		grpc.MaxCallRecvMsgSize(1024*1024*1024), 
 		grpc.MaxCallSendMsgSize(1024*1024*1024), 
@@ -54,7 +54,7 @@ func requestUploadPort(masterAddress string) (*pb.UploadResponseBody, error) {
 	c := pb.NewDFSClient(conn)
 
 	// Call the RPC method
-	resp, err := c.UploadPortsRequest(context.Background(), &pb.UploadRequestBody{MasterAddress: masterAddress})
+	resp, err := c.UploadPortsRequest(context.Background(), &pb.UploadRequestBody{MasterAddress: masterAddress ,ClientAddress: clientAddress})
 	if err != nil {
 		fmt.Println("Error calling UploadRequest:", err)
 		return nil, err
@@ -64,7 +64,7 @@ func requestUploadPort(masterAddress string) (*pb.UploadResponseBody, error) {
 	return resp, nil
 }
 
-func uploadFile(nodeAddress, filePath string) error {
+func uploadFile(nodeAddress, filePath,clientAddress string) error {
 	// Open the file
 	file, err := os.Open(filePath)
 	if err != nil {
@@ -97,6 +97,7 @@ func uploadFile(nodeAddress, filePath string) error {
 		FileData:    fileData,
 		FileName:    fileName,
 		FileSize:    int64(len(fileData)),
+		ClientAddress: clientAddress,
 	})
 	return err
 }
@@ -192,10 +193,9 @@ func downloadFile(Addresses []string, Paths []string, file_name string, fileSize
 
 func main() {
 	// read parties addresses
-	var masterAddress, clientAddress string
-	nodes := []string{}
+	var masterAddress,clientAddress string
 
-	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
+	pbUtils.ReadFile_client(&masterAddress, &clientAddress)
 	go startClientServer(clientAddress)
 
 	fmt.Println("Choose operation:")
@@ -212,7 +212,7 @@ func main() {
 		fmt.Scanln(&filePath)
 
 		// Get available data node from master
-		resp, err := requestUploadPort(masterAddress)
+		resp, err := requestUploadPort(masterAddress,clientAddress)
 		if err != nil {
 			fmt.Println("Error getting upload port:", err)
 			return
@@ -220,7 +220,7 @@ func main() {
 
 		// Upload file to selected data node
 		dataNodeAddress := fmt.Sprintf("%s:%s", resp.DataNode_IP, resp.SelectedPort)
-		err = uploadFile(dataNodeAddress, filePath)
+		err = uploadFile(dataNodeAddress, filePath,clientAddress)
 		if err != nil {
 			fmt.Println("Error uploading file:", err)
 			return

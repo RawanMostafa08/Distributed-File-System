@@ -130,6 +130,7 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 		NodeId:          s.nodeID,
 		FileSize:        req.FileSize,
 		Status:          true,
+		ClientAddress: req.ClientAddress,
 	})
 
 	if err != nil {
@@ -232,10 +233,10 @@ func main() {
 	var node_index int32
 	fmt.Scanln(&node_index)
 
-	var masterAddress, clientAddress string
+	var masterAddress string
 	nodes := []string{}
 
-	pbUtils.ReadFile(&masterAddress, &clientAddress, &nodes)
+	pbUtils.ReadFile_node(&masterAddress, &nodes)
 	parts := strings.Split(nodes[node_index], ":")
 	ip := parts[0]
 	node_ports := strings.Split(parts[1], ",")

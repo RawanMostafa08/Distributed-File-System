@@ -1,0 +1,2 @@
+Master_Address = 192.168.1.47:8080
+Client_Address = 192.168.1.46:5000

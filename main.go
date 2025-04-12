@@ -48,7 +48,7 @@ func ReadFile_master(masterAddress *string,nodes *[]string)(){
 
 func ReadFile_node(masterAddress *string,nodes *[]string)(){
 	// Open the file
-	file, err := os.Open("../config_master.txt")
+	file, err := os.Open("../config_node.txt")
 	if err != nil {
 		fmt.Println("Error opening file:", err)
 		return

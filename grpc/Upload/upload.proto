@@ -10,6 +10,7 @@ message Empty {}
 //upload methods
 message UploadRequestBody {
     string master_address = 1;
+    string client_address = 2;
 }
 
 message UploadResponseBody {
@@ -22,6 +23,7 @@ message UploadFileRequestBody {
     bytes file_data = 2;
     string file_name = 3;
     int64 file_size = 4;
+    string client_address = 5;
 }
 
 message NodeMasterAckRequestBodyUpload {
@@ -31,6 +33,7 @@ message NodeMasterAckRequestBodyUpload {
     string node_id = 4;
     bool status = 5;
     int64 file_size = 6;
+    string client_address = 7;
 }
 
 message MasterClientAckRequestBodyUpload {
