@@ -26,6 +26,7 @@ func GetAvailablePort(node models.DataNode) (string, error) {
 	for _, port := range node.Port {
 		address := fmt.Sprintf("%s:%s", node.IP, port)
 		conn, err := grpc.Dial(address, grpc.WithInsecure())
+		fmt.Printf("trying to dial to address: %s\n", address)
 		if err != nil {
 			conn.Close()
 			continue
