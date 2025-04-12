@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -86,7 +87,7 @@ func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.Nod
 		NodeID:   req.NodeId,
 		FileSize: req.FileSize,
 	}
-	
+
 	lookupTableMutex.Lock()
 	lookupTable = append(lookupTable, newFile)
 	lookupTableMutex.Unlock()
@@ -179,7 +180,13 @@ func ReplicateFile() {
 						} else {
 							// update the lookup table
 							lookupTableMutex.Lock()
+							if err := os.MkdirAll("files", os.ModePerm); err != nil {
+								return
+							}
 							path := filepath.Join("files", valid)
+							if err := os.MkdirAll(path, os.ModePerm); err != nil {
+								return
+							}
 							file := models.FileData{
 								Filename: srcFile.Filename,
 								FilePath: path,

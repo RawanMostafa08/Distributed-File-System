@@ -95,6 +95,11 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 
 	// Save the file
 	filePath := filepath.Join("files", s.nodeID)
+
+	if err := os.MkdirAll(filePath, os.ModePerm); err != nil {
+		return nil, fmt.Errorf("failed to create directory: %v", err)
+	}
+
 	filePathU := filepath.Join("files", s.nodeID, req.FileName)
 	if err := os.WriteFile(filePathU, req.FileData, 0644); err != nil {
 		return nil, fmt.Errorf("failed to save file: %v", err)
@@ -165,12 +170,19 @@ func (s *replicateServer) CopyFile(ctx context.Context, req *pb_r.CopyFileReques
 	if err := os.MkdirAll("files", os.ModePerm); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %v", err)
 	}
-	filePath := filepath.Join("files", req.DestId, req.FileName)
+	folderPath := filepath.Join("files", req.DestId)
+
+	if err := os.MkdirAll(folderPath, os.ModePerm); err != nil {
+		return nil, fmt.Errorf("failed to create directory: %v", err)
+	}
+
+	filePath := filepath.Join(folderPath, req.FileName)
 	err := os.WriteFile(filePath, req.FileData, 0644)
 	if err != nil {
 		fmt.Println("Error writing file:", err)
 		return nil, err
 	}
+	
 	fmt.Println("File copied successfully to:", req.DestId)
 	return &pb_r.CopyFileResponse{Ack: "ACK"}, nil
 }
