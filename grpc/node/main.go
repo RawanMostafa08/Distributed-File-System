@@ -57,7 +57,6 @@ func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFi
 	// Open the file
 	// filePath := fmt.Sprintf("%s/%s", req.FilePath, req.FileName)
 	filePath := filepath.Join(req.FilePath, req.FileName)
-	fmt.Printf("filePathhhhhhhhhhhhhhhhhhhhhhh in download %s\n", filePath)
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -102,7 +101,6 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 	}
 
 	filePathU := filepath.Join("files", s.nodeID, req.FileName)
-	fmt.Printf("filePathhhhhhhhhhhhhhhhhhhhhhh in upload %s\n", filePathU)
 
 	if err := os.WriteFile(filePathU, req.FileData, 0644); err != nil {
 		return nil, fmt.Errorf("failed to save file: %v", err)

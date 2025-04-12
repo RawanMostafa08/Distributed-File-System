@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 
 	pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
 	"github.com/RawanMostafa08/Distributed-File-System/grpc/models"
@@ -20,6 +19,22 @@ func GetNodeByID(nodeID string, dataNodes []models.DataNode) (models.DataNode, e
 		}
 	}
 	return models.DataNode{}, errors.New("node not found")
+}
+
+func GetAvailablePort(node models.DataNode) (string, error) {
+	selectedPort := ""
+	for _, port := range node.Port {
+		address := fmt.Sprintf("%s:%s", node.IP, port)
+		conn, err := grpc.Dial(address, grpc.WithInsecure())
+		if err != nil {
+			conn.Close()
+			continue
+		}
+		selectedPort = port
+		conn.Close()
+		return selectedPort, nil
+	}
+	return "",fmt.Errorf("no available ports for node %s", node.NodeID) 
 }
 
 func GetFileNodes(fileName string, lookupTable []models.FileData, dataNodes []models.DataNode) []string {
@@ -52,7 +67,6 @@ func GetSrcFileInfo(file models.FileData, nodes []string) (models.FileData, erro
 
 func SelectNodeToCopyTo(fileNodes []string, dataNodes []models.DataNode) (string, string, error) {
 	// alive node , not in the list of nodes that have the file
-
 	for _, node := range dataNodes {
 		flag := false
 		if node.IsDataNodeAlive {
@@ -63,12 +77,15 @@ func SelectNodeToCopyTo(fileNodes []string, dataNodes []models.DataNode) (string
 				}
 			}
 			if !flag {
-				randomIndex := rand.Intn(len(node.Port))
-				return node.NodeID,node.Port[randomIndex],nil
+				port, err := GetAvailablePort(node)
+				if err != nil {
+					continue
+				}
+				return node.NodeID,port,nil
 			}
 		}
 	}
-	return "", "", errors.New("no available nodes to copy to")
+	return "", "", errors.New("no available nodes/ports to copy to")
 
 }
 
@@ -82,11 +99,9 @@ func CopyFileToNode(srcFile models.FileData, destNodeID string, destNodePort str
 	if err != nil {
 		return fmt.Errorf("error getting dest node by id: %v", err)
 	}
-	/////////////////////
-	srcPort := ""
-	randomIndex := rand.Intn(len(srcNode.Port))
-	srcPort = srcNode.Port[randomIndex]
-	if srcPort == "" {
+	
+	srcPort,err := GetAvailablePort(srcNode)
+	if err != nil {
 		return fmt.Errorf("no free port found on source node")
 	}
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", srcNode.IP, srcPort), grpc.WithInsecure(), grpc.WithDefaultCallOptions(

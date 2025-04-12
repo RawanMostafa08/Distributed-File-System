@@ -16,12 +16,12 @@ import (
 	pbUtils "github.com/RawanMostafa08/Distributed-File-System/grpc/utils"
 )
 
-type textClientServer struct{
+type textClientServer struct {
 	pb.UnimplementedDFSServer
 }
 
 func (s *textClientServer) MasterClientAckRequestUpload(ctx context.Context, req *pb.MasterClientAckRequestBodyUpload) (*pb.Empty, error) {
-	fmt.Printf("6. Client notified-> %s",req.Message)
+	fmt.Printf("6. Client notified-> %s", req.Message)
 	return &pb.Empty{}, nil
 }
 func startClientServer(clientAddress string) {
@@ -32,7 +32,7 @@ func startClientServer(clientAddress string) {
 	}
 	s := grpc.NewServer(
 		grpc.MaxRecvMsgSize(1024*1024*200), // 200MB receive
-		grpc.MaxSendMsgSize(1024*1024*200), // 200MB send	
+		grpc.MaxSendMsgSize(1024*1024*200), // 200MB send
 	)
 	pb.RegisterDFSServer(s, &textClientServer{})
 	fmt.Printf("Client gRPC server listening at %s\n", clientAddress)
@@ -59,7 +59,7 @@ func requestUploadPort(masterAddress string) (*pb.UploadResponseBody, error) {
 		fmt.Println("Error calling UploadRequest:", err)
 		return nil, err
 	}
-	fmt.Printf("2. Client received node address %s:%s",resp.DataNode_IP, resp.SelectedPort)
+	fmt.Printf("2. Client received node address %s:%s", resp.DataNode_IP, resp.SelectedPort)
 
 	return resp, nil
 }
@@ -96,7 +96,7 @@ func uploadFile(nodeAddress, filePath string) error {
 		NodeAddress: nodeAddress,
 		FileData:    fileData,
 		FileName:    fileName,
-		FileSize: int64(len(fileData)),
+		FileSize:    int64(len(fileData)),
 	})
 	return err
 }
@@ -125,7 +125,7 @@ func requestDownloadPorts(masterAddress string, file_name string) (*pb.DownloadP
 
 }
 
-func requestDownloadFile(nodeAddress, fileName string,filePath string, start, end int64, wg *sync.WaitGroup, chunks map[int][]byte, index int, mu *sync.Mutex) {
+func requestDownloadFile(nodeAddress, fileName string, filePath string, start, end int64, wg *sync.WaitGroup, chunks map[int][]byte, index int, mu *sync.Mutex) {
 	defer wg.Done()
 	// conn, err := grpc.Dial(nodeAddress, grpc.WithInsecure())
 	conn, err := grpc.Dial(nodeAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
@@ -139,7 +139,7 @@ func requestDownloadFile(nodeAddress, fileName string,filePath string, start, en
 	defer conn.Close()
 
 	c := pb.NewDFSClient(conn)
-	resp, err := c.DownloadFileRequest(context.Background(), &pb.DownloadFileRequestBody{FileName: fileName, FilePath: filePath,Start: start, End: end})
+	resp, err := c.DownloadFileRequest(context.Background(), &pb.DownloadFileRequestBody{FileName: fileName, FilePath: filePath, Start: start, End: end})
 
 	if err != nil {
 		fmt.Println("Error downloading chunk:", err)
@@ -152,22 +152,26 @@ func requestDownloadFile(nodeAddress, fileName string,filePath string, start, en
 
 }
 
-func downloadFile(Addresses []string,Paths []string ,file_name string, fileSize int64) {
+func downloadFile(Addresses []string, Paths []string, file_name string, fileSize int64) {
 	chunkSize := int64(math.Ceil(float64(fileSize) / float64(len(Addresses))))
 	var wg sync.WaitGroup
 	chunks := make(map[int][]byte)
 	var mu sync.Mutex
 
-	for i, node := range Addresses {
-		start := int64(i) * chunkSize
-		end := start + chunkSize - 1
-		if end >= fileSize {
-			end = fileSize - 1
-		}
-		wg.Add(1)
-		go requestDownloadFile(node, file_name,Paths[i], start, end, &wg, chunks, i, &mu)
-	}
+	if fileSize == 0 || fileSize == 1 {
+		go requestDownloadFile(Addresses[0], file_name, Paths[0], 0, 0, &wg, chunks, 0, &mu)
+	} else {
 
+		for i, node := range Addresses {
+			start := int64(i) * chunkSize
+			end := start + chunkSize - 1
+			if end >= fileSize {
+				end = fileSize - 1
+			}
+			wg.Add(1)
+			go requestDownloadFile(node, file_name, Paths[i], start, end, &wg, chunks, i, &mu)
+		}
+	}
 	wg.Wait()
 
 	// Reconstruct the file
@@ -199,7 +203,6 @@ func main() {
 	fmt.Println("2. Download file")
 	var choice int
 	fmt.Scanln(&choice)
-
 
 	switch choice {
 	case 1:
@@ -237,7 +240,7 @@ func main() {
 			fmt.Println("Error calling DownloadPortsRequest:", err)
 			return
 		}
-		if len(resp.Addresses) == 0{
+		if len(resp.Addresses) == 0 {
 			fmt.Print("file not found on any node")
 			return
 		}
@@ -245,7 +248,7 @@ func main() {
 
 		fileSize := resp.FileSize
 
-		downloadFile(resp.Addresses, resp.Paths,file_name, fileSize)
+		downloadFile(resp.Addresses, resp.Paths, file_name, fileSize)
 	default:
 		fmt.Println("Invalid choice")
 	}

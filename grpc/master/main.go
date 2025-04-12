@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand"
 	"net"
 	"os"
 	"path/filepath"
@@ -37,11 +36,6 @@ type HeartBeatServer struct {
 	pbHeartBeats.UnimplementedHeartbeatServiceServer
 }
 
-func init() {
-	// Seed the random number generator
-	rand.Seed(time.Now().UnixNano())
-}
-
 var dataNodes []models.DataNode
 var lookupTable []models.FileData
 var lookupTableMutex sync.Mutex
@@ -58,12 +52,15 @@ func getNodeByID(nodeID string) (models.DataNode, error) {
 func (s *textServer) UploadPortsRequest(ctx context.Context, req *pb.UploadRequestBody) (*pb.UploadResponseBody, error) {
 	fmt.Println("1.Master received upload request")
 	selectedNode := models.DataNode{IsDataNodeAlive: false}
-	selectedPort := ""
+	selectedPort:= ""
+	err := error(nil)
 	for _, node := range dataNodes {
 		if node.IsDataNodeAlive && len(node.Port) > 0 {
 			selectedNode = node
-			randomIndex := rand.Intn(len(node.Port))
-			selectedPort = node.Port[randomIndex]
+			selectedPort, err = pb_r_utils.GetAvailablePort(node)
+			if err != nil {
+				continue
+			}
 			break
 		}
 	}
@@ -136,8 +133,11 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 
 			} else if filenode.IsDataNodeAlive && len(filenode.Port) > 0 {
 				paths = append(paths, file.FilePath)
-				randomIndex := rand.Intn(len(filenode.Port))
-				nodes = append(nodes, fmt.Sprintf("%s:%s", filenode.IP, filenode.Port[randomIndex]))
+				port, err := pb_r_utils.GetAvailablePort(filenode)
+				if err != nil {
+					continue
+				}
+				nodes = append(nodes, fmt.Sprintf("%s:%s", filenode.IP, port))
 				file_size = file.FileSize
 			}
 		}
