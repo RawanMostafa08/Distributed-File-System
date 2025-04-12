@@ -56,7 +56,13 @@ func (s *textServer) DownloadFileRequest(ctx context.Context, req *pb.DownloadFi
 
 	// Open the file
 	// filePath := fmt.Sprintf("%s/%s", req.FilePath, req.FileName)
-	filePath := filepath.Join(req.FilePath, req.FileName)
+	parts := strings.FieldsFunc(req.FilePath, func(r rune) bool {
+		return r == '/' || r == '\\'
+	})
+	normalizedPath := filepath.Join(parts...)
+	fmt.Println("Normalized path:", normalizedPath)
+
+	filePath := filepath.Join(normalizedPath, req.FileName)
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
