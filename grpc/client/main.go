@@ -59,7 +59,7 @@ func requestUploadPort(masterAddress string) (*pb.UploadResponseBody, error) {
 		fmt.Println("Error calling UploadRequest:", err)
 		return nil, err
 	}
-	fmt.Printf("2. Client received node address %s:%s", resp.DataNode_IP, resp.SelectedPort)
+	fmt.Printf("2. Client received node address")
 
 	return resp, nil
 }
