@@ -41,8 +41,8 @@ type replicateServer struct {
 
 func ackToMaster(ctx context.Context, masterAddress string, nodeID string, port string) {
 	conn, err := grpc.Dial(masterAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
-		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
-		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+		grpc.MaxCallRecvMsgSize(1024*1024*1024),
+		grpc.MaxCallSendMsgSize(1024*1024*1024), 
 	))
 	if err != nil {
 		return
@@ -114,8 +114,8 @@ func (s *textServer) UploadFileRequest(ctx context.Context, req *pb.UploadFileRe
 
 	// Notify master tracker
 	conn, err := grpc.Dial(s.masterAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
-		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
-		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+		grpc.MaxCallRecvMsgSize(1024*1024*1024), 
+		grpc.MaxCallSendMsgSize(1024*1024*1024), 
 	))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to master: %v", err)
@@ -153,8 +153,8 @@ func ReadMP4File(filename string) ([]byte, error) {
 func pingMaster(nodeIndex int32, masterAddress string) {
 	for {
 		conn, err := grpc.Dial(masterAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
-			grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+			grpc.MaxCallRecvMsgSize(1024*1024*1024), 
+			grpc.MaxCallSendMsgSize(1024*1024*1024), 
 		))
 		if err != nil {
 			fmt.Printf("Failed to connect to master: %v \n", err)
@@ -202,8 +202,8 @@ func (s *replicateServer) CopyNotification(ctx context.Context, req *pb_r.CopyNo
 	}
 	// conn, err := grpc.Dial(fmt.Sprintf("%s:%s", req.DestIp, req.DestPort), grpc.WithInsecure())
 	conn, err := grpc.Dial(fmt.Sprintf("%s:%s", req.DestIp, req.DestPort), grpc.WithInsecure(), grpc.WithDefaultCallOptions(
-		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
-		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+		grpc.MaxCallRecvMsgSize(1024*1024*1024), 
+		grpc.MaxCallSendMsgSize(1024*1024*1024), 
 	))
 	if err != nil {
 		fmt.Println("did not connect:", err)
@@ -250,8 +250,8 @@ func main() {
 			}
 
 			s := grpc.NewServer(
-				grpc.MaxRecvMsgSize(1024*1024*200), // 200MB receive
-				grpc.MaxSendMsgSize(1024*1024*200), // 200MB send
+				grpc.MaxRecvMsgSize(1024*1024*1024), 
+				grpc.MaxSendMsgSize(1024*1024*1024),
 			)
 
 			pb.RegisterDFSServer(s, &textServer{

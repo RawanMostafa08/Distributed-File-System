@@ -91,8 +91,8 @@ func (s *textServer) NodeMasterAckRequestUpload(ctx context.Context, req *pb.Nod
 	fmt.Printf("4,5. Master notified and added file to lookup table: %s on node %s\n", req.FileName, req.DataNodeAddress)
 
 	conn, err := grpc.Dial(s.clientAddress, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
-		grpc.MaxCallRecvMsgSize(1024*1024*200), // 200MB receive
-		grpc.MaxCallSendMsgSize(1024*1024*200), // 200MB send
+		grpc.MaxCallRecvMsgSize(1024*1024*1024),
+		grpc.MaxCallSendMsgSize(1024*1024*1024),
 	))
 	if err != nil {
 		fmt.Println("Failed to connect to client:", err)
@@ -266,8 +266,8 @@ func main() {
 	go ReplicateFile()
 
 	s := grpc.NewServer(
-		grpc.MaxRecvMsgSize(1024*1024*200), // 200MB receive
-		grpc.MaxSendMsgSize(1024*1024*200), // 200MB send
+		grpc.MaxRecvMsgSize(1024*1024*1024),
+		grpc.MaxSendMsgSize(1024*1024*1024), 
 
 	)
 	pb.RegisterDFSServer(s, &textServer{
