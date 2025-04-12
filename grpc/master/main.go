@@ -132,7 +132,14 @@ func (s *textServer) DownloadPortsRequest(ctx context.Context, req *pb.DownloadP
 				fmt.Println("Error getting node by ID:", err)
 
 			} else if filenode.IsDataNodeAlive && len(filenode.Port) > 0 {
-				paths = append(paths, file.FilePath)
+
+				parts := strings.FieldsFunc(file.FilePath, func(r rune) bool {
+					return r == '/' || r == '\\'
+				})
+				normalizedPath := filepath.Join(parts...)
+				fmt.Println("Normalized path:", normalizedPath)
+				paths = append(paths, normalizedPath)
+				// paths = append(paths, file.FilePath)
 				port, err := pb_r_utils.GetAvailablePort(filenode)
 				if err != nil {
 					continue
