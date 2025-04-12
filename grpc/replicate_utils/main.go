@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	pb_r "github.com/RawanMostafa08/Distributed-File-System/grpc/Replicate"
 	"github.com/RawanMostafa08/Distributed-File-System/grpc/models"
@@ -23,30 +22,18 @@ func GetNodeByID(nodeID string, dataNodes []models.DataNode) (models.DataNode, e
 }
 
 func GetAvailablePort(node models.DataNode) (string, error) {
+	selectedPort := ""
 	for _, port := range node.Port {
 		address := fmt.Sprintf("%s:%s", node.IP, port)
+		conn, err := grpc.Dial(address, grpc.WithInsecure())
 		fmt.Printf("trying to dial to address: %s\n", address)
-
-		// Use a timeout context to prevent hanging
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-
-		conn, err := grpc.DialContext(ctx, address,
-			grpc.WithInsecure(),
-			grpc.WithBlock()) // Makes Dial synchronous
-
 		if err != nil {
-			// If there's an error, the port might be available (connection refused)
-			// or it might be truly unavailable (other errors)
-			if conn != nil {
-				conn.Close()
-			}
+			conn.Close()
 			continue
 		}
-
-		// If we get here, the connection was successful
+		selectedPort = port
 		conn.Close()
-		return port, nil
+		return selectedPort, nil
 	}
 	return "", fmt.Errorf("no available ports for node %s", node.NodeID)
 }
