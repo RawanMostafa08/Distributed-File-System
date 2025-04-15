@@ -37,6 +37,8 @@ func ReadFile_master(masterAddress *string,nodes *[]string)(){
 			*nodes = append(*nodes, value)
 		case "Node2_Address":
 			*nodes = append(*nodes, value)
+		case "Node3_Address":
+			*nodes = append(*nodes, value)
 		}
 	}
 
@@ -74,6 +76,8 @@ func ReadFile_node(masterAddress *string,nodes *[]string)(){
 		case "Node1_Address":
 			*nodes = append(*nodes, value)
 		case "Node2_Address":
+			*nodes = append(*nodes, value)
+		case "Node3_Address":
 			*nodes = append(*nodes, value)
 		}
 	}
